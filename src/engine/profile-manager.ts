@@ -1,8 +1,20 @@
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { ToolProfile, LearnedPattern, StateIndicator, StateDefinition } from "../types.js";
+import type { ToolProfile, ToolDiscovery, LearnedPattern, StateIndicator, StateDefinition, SubPrompt } from "../types.js";
 
-const PROFILES_DIR = resolve(new URL("../../profiles", import.meta.url).pathname);
+export const PROFILES_DIR = resolve(new URL("../../profiles", import.meta.url).pathname);
+
+/**
+ * Atomic JSON write: temp file + rename on same filesystem.
+ * Prevents corrupt state on crash mid-write.
+ */
+export async function writeAtomicJson(filePath: string, data: unknown): Promise<void> {
+  const dir = resolve(filePath, "..");
+  await mkdir(dir, { recursive: true });
+  const tmpPath = `${filePath}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+  await rename(tmpPath, filePath);
+}
 
 export async function loadProfile(toolId: string): Promise<ToolProfile | null> {
   const path = join(PROFILES_DIR, `${toolId}.json`);
@@ -15,19 +27,22 @@ export async function loadProfile(toolId: string): Promise<ToolProfile | null> {
 }
 
 export async function saveProfile(profile: ToolProfile): Promise<string> {
-  await mkdir(PROFILES_DIR, { recursive: true });
   const path = join(PROFILES_DIR, `${profile.tool_id}.json`);
-  const tmpPath = `${path}.tmp`;
-
   profile.last_updated = new Date().toISOString();
-
-  await writeFile(tmpPath, JSON.stringify(profile, null, 2), "utf-8");
-  await rename(tmpPath, path);
+  await writeAtomicJson(path, profile);
   return path;
 }
 
-export function bootstrapProfile(toolId: string, command: string, interactionMode: "interactive" | "args" = "interactive"): ToolProfile {
-  return {
+export function bootstrapProfile(
+  toolId: string,
+  command: string,
+  interactionMode: "interactive" | "args" = "interactive",
+  discovery?: ToolDiscovery,
+): ToolProfile {
+  // Infer interaction mode from discovery if available
+  const mode = discovery?.interactive ? "interactive" : interactionMode;
+
+  const profile: ToolProfile = {
     schema_version: "1.0",
     tool_id: toolId,
     tool_command: command,
@@ -35,13 +50,13 @@ export function bootstrapProfile(toolId: string, command: string, interactionMod
     confidence: 0,
     probe_count: 0,
     needs_review: true,
-    interaction_mode: interactionMode,
+    interaction_mode: mode,
 
     launch: {
       default_args: [],
       env: {},
       needs_pty: true,
-      startup_timeout_sec: 30,
+      startup_timeout_sec: discovery?.interactive ? 30 : 10,
     },
 
     states: {
@@ -98,6 +113,19 @@ export function bootstrapProfile(toolId: string, command: string, interactionMod
 
     learned_patterns: [],
   };
+
+  if (discovery) {
+    profile.discovery = discovery;
+    if (discovery.parsed_description) {
+      profile.states.ready.description = `Ready: ${discovery.parsed_description}`;
+    }
+    if (!discovery.interactive) {
+      profile.timing.idle_threshold_sec = 3;
+      profile.timing.max_session_sec = 60;
+    }
+  }
+
+  return profile;
 }
 
 /**
@@ -165,13 +193,108 @@ export function mergeLearnedPatterns(
   return updated;
 }
 
+export interface DetectedSubPrompt {
+  prompt_text: string;
+  prompt_type: "yes_no" | "selection" | "text_input" | "confirmation" | "unknown";
+  suggested_response: string;
+  confidence: number;
+}
+
+/**
+ * Register a detected sub-prompt into a profile's prompting state.
+ * Creates an output_glob indicator from the prompt text and sets the auto-response.
+ * Returns a new profile (does not mutate the input).
+ */
+export function registerSubPrompt(
+  profile: ToolProfile,
+  detected: DetectedSubPrompt,
+): ToolProfile {
+  const updated = structuredClone(profile);
+
+  if (!updated.states.prompting) {
+    updated.states.prompting = {
+      description: "Tool wants user input",
+      indicators: [],
+      sub_prompts: [],
+    };
+  }
+
+  if (!updated.states.prompting.sub_prompts) {
+    updated.states.prompting.sub_prompts = [];
+  }
+
+  // Build a glob pattern from the prompt text (wildcard prefix/suffix for flexibility)
+  const globPattern = `*${detected.prompt_text.trim().replace(/[[\]{}]/g, "\\$&")}*`;
+
+  // Check for duplicates
+  const existing = updated.states.prompting.sub_prompts.find(
+    (sp) => sp.indicators.some((ind) => ind.pattern === globPattern),
+  );
+  if (existing) return updated;
+
+  const id = `sub-prompt-${updated.states.prompting.sub_prompts.length}`;
+  const subPrompt: SubPrompt = {
+    id,
+    indicators: [{
+      type: "output_glob",
+      pattern: globPattern,
+      case_insensitive: true,
+    }],
+    auto_response: detected.suggested_response ? detected.suggested_response + "\r" : null,
+    description: `${detected.prompt_type}: ${detected.prompt_text.substring(0, 80)}`,
+  };
+
+  updated.states.prompting.sub_prompts.push(subPrompt);
+  return updated;
+}
+
+/**
+ * Register structural indicators on the profile from classified segments.
+ * Some states (like "ready" in TUI tools) are defined by structural events
+ * (silence/settle) rather than text patterns. This function detects those
+ * states from classification results and adds the appropriate indicators.
+ */
+export function registerStructuralIndicators(
+  profile: ToolProfile,
+  classifiedRuns: Array<{ segments: import("../types.js").ClassifiedSegment[] }>,
+): ToolProfile {
+  const updated = structuredClone(profile);
+
+  for (const run of classifiedRuns) {
+    for (const seg of run.segments) {
+      if (seg.state === "ready" && seg.confidence >= 0.5) {
+        const readyState = updated.states.ready;
+        if (!readyState) continue;
+
+        // Add silence_after_output_ms indicator if not already present
+        const hasStructural = readyState.indicators.some(
+          (ind) => ind.type === "silence_after_output_ms",
+        );
+        if (!hasStructural) {
+          const silenceMs = seg.events.find(
+            (e) => e.type === "meta" && e.event === "settled",
+          )?.value;
+          readyState.indicators.push({
+            type: "silence_after_output_ms",
+            value: silenceMs ?? 3000,
+          });
+        }
+      }
+    }
+  }
+
+  // Recompute confidence with structural indicators included
+  updated.confidence = computeProfileConfidence(updated);
+  return updated;
+}
+
 /**
  * Compute overall profile confidence from state-level pattern data.
  */
 function computeProfileConfidence(profile: ToolProfile): number {
-  // States that need text-pattern indicators to be useful
-  const patternStates = ["startup", "ready", "working"];
-  // States identified by structural events (process exit, exit code)
+  // States that contribute to confidence via text patterns or structural indicators
+  const patternStates = ["startup", "ready", "working", "thinking", "prompting"];
+  // States identified purely by structural events (process exit, exit code)
   const structuralStates = ["completed", "error"];
 
   let totalScore = 0;
@@ -182,15 +305,20 @@ function computeProfileConfidence(profile: ToolProfile): number {
     if (!state) continue;
     stateCount++;
 
+    // Check for text patterns
     const statePatterns = profile.learned_patterns.filter(
       (p) => p.classified_as === stateName,
     );
 
-    if (statePatterns.length === 0) continue;
-
-    const avgConf =
-      statePatterns.reduce((sum, p) => sum + p.confidence, 0) / statePatterns.length;
-    totalScore += avgConf;
+    if (statePatterns.length > 0) {
+      const avgConf =
+        statePatterns.reduce((sum, p) => sum + p.confidence, 0) / statePatterns.length;
+      totalScore += avgConf;
+    } else if (state.indicators.some((ind) => ind.type === "silence_after_output_ms")) {
+      // Structural indicator: state is identified by silence/timing, not text.
+      // Give partial credit -- the state is known but not text-anchored.
+      totalScore += 0.6;
+    }
   }
 
   // Structural states get credit if they have indicators defined

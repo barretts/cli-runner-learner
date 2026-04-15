@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "tool_id": "crush",
   "tool_command": "/opt/homebrew/bin/crush",
-  "last_updated": "2026-04-15T19:05:40.226Z",
-  "confidence": 0.52,
-  "probe_count": 3,
+  "last_updated": "2026-04-15T21:21:53.078Z",
+  "confidence": 0.37142857142857144,
+  "probe_count": 6,
   "needs_review": false,
   "interaction_mode": "interactive",
   "launch": {
@@ -122,18 +122,18 @@
   "learned_patterns": [
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-0-1776279841097.jsonl",
-      "timestamp": "2026-04-15T19:05:40.225Z",
+      "timestamp": "2026-04-15T21:21:53.075Z",
       "pattern": "[?2026$p[?2027$p [?1004$pi=31,s=1,v=1,a=q,t=d,f=24;AAAA",
       "classified_as": "startup",
-      "occurrences": 6,
+      "occurrences": 12,
       "confidence": 1
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-0-1776279841097.jsonl",
-      "timestamp": "2026-04-15T19:05:40.225Z",
+      "timestamp": "2026-04-15T21:21:53.075Z",
       "pattern": "[?1004$pi=31,s=1,v=1,a=q,t=d,f=24;AAAA [=0;1u [=1;1u",
       "classified_as": "startup",
-      "occurrences": 6,
+      "occurrences": 12,
       "confidence": 1
     }
   ],

@@ -1,0 +1,315 @@
+{
+  "schema_version": "1.0",
+  "tool_id": "agent",
+  "tool_command": "/Users/bsonntag/.local/bin/agent",
+  "last_updated": "2026-04-15T21:14:26.605Z",
+  "confidence": 0.538073593073593,
+  "probe_count": 13,
+  "needs_review": false,
+  "interaction_mode": "interactive",
+  "launch": {
+    "default_args": [],
+    "env": {},
+    "needs_pty": true,
+    "startup_timeout_sec": 30
+  },
+  "states": {
+    "startup": {
+      "description": "Initial TUI render with character-by-character animation before the prompt is interactive",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*loading*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*initializ*"
+        }
+      ],
+      "timeout_sec": 30
+    },
+    "ready": {
+      "description": "Idle state showing model name, path, and input prompt — tool is waiting for user query",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*GPT-5*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Cursor Agent"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*-ee4b43a"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "hint: * to skip all approvals"
+        }
+      ]
+    },
+    "working": {
+      "description": "Tool is actively processing",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "Cursor Agent *-a5d3e17"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "* � ain"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "� Plan, search, build anything"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "GPT-5.4 1M"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "/ commands"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "commands �"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Cursor Agent"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*-ee4b43a"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "hint: * to skip all approvals"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "GPT-5.4 1M / commands � @ files � ! shell"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Press Ctrl+C again to exit"
+        }
+      ]
+    },
+    "prompting": {
+      "description": "Tool wants user input",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "� Workspace Trust Required"
+        }
+      ],
+      "sub_prompts": []
+    },
+    "thinking": {
+      "description": "Tool is processing/reasoning",
+      "indicators": []
+    },
+    "completed": {
+      "description": "Tool finished",
+      "indicators": [
+        {
+          "type": "process_exit"
+        }
+      ]
+    },
+    "error": {
+      "description": "Tool errored",
+      "indicators": [
+        {
+          "type": "exit_code_nonzero"
+        }
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "from": "startup",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "startup",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "ready",
+      "to": "working",
+      "on": "input_sent"
+    },
+    {
+      "from": "working",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "working",
+      "to": "thinking",
+      "on": "thinking_indicator"
+    },
+    {
+      "from": "thinking",
+      "to": "working",
+      "on": "output_resumed"
+    },
+    {
+      "from": "working",
+      "to": "completed",
+      "on": "completion_indicator"
+    },
+    {
+      "from": "working",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "*",
+      "to": "error",
+      "on": "error_indicator"
+    },
+    {
+      "from": "*",
+      "to": "completed",
+      "on": "process_exit"
+    }
+  ],
+  "timing": {
+    "typical_startup_sec": 5,
+    "idle_threshold_sec": 8,
+    "max_session_sec": 300
+  },
+  "learned_patterns": [
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776282645317.jsonl",
+      "timestamp": "2026-04-15T19:51:39.557Z",
+      "pattern": "� Workspace Trust Required",
+      "classified_as": "prompting",
+      "occurrences": 7,
+      "confidence": 0.7666666666666666
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-1-1776282653081.jsonl",
+      "timestamp": "2026-04-15T19:51:07.236Z",
+      "pattern": "Cursor Agent *-a5d3e17",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.6499999999999999
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-1-1776282653081.jsonl",
+      "timestamp": "2026-04-15T19:51:39.558Z",
+      "pattern": "* � ain",
+      "classified_as": "working",
+      "occurrences": 9,
+      "confidence": 0.8083333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-1-1776282653081.jsonl",
+      "timestamp": "2026-04-15T20:31:37.878Z",
+      "pattern": "� Plan, search, build anything",
+      "classified_as": "working",
+      "occurrences": 8,
+      "confidence": 0.8708333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-1-1776282653081.jsonl",
+      "timestamp": "2026-04-15T19:51:39.558Z",
+      "pattern": "GPT-5.4 1M",
+      "classified_as": "working",
+      "occurrences": 5,
+      "confidence": 0.875
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-1-1776282653081.jsonl",
+      "timestamp": "2026-04-15T19:51:39.558Z",
+      "pattern": "/ commands",
+      "classified_as": "working",
+      "occurrences": 5,
+      "confidence": 0.875
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-1-1776282653081.jsonl",
+      "timestamp": "2026-04-15T19:51:39.558Z",
+      "pattern": "commands �",
+      "classified_as": "working",
+      "occurrences": 5,
+      "confidence": 0.875
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776285028419.jsonl",
+      "timestamp": "2026-04-15T21:14:10.380Z",
+      "pattern": "Cursor Agent",
+      "classified_as": "working",
+      "occurrences": 17,
+      "confidence": 0.8875
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776285028419.jsonl",
+      "timestamp": "2026-04-15T21:14:10.380Z",
+      "pattern": "*-ee4b43a",
+      "classified_as": "working",
+      "occurrences": 17,
+      "confidence": 0.8875
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776285028419.jsonl",
+      "timestamp": "2026-04-15T21:14:10.380Z",
+      "pattern": "hint: * to skip all approvals",
+      "classified_as": "working",
+      "occurrences": 17,
+      "confidence": 0.8875
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776285028419.jsonl",
+      "timestamp": "2026-04-15T20:31:54.139Z",
+      "pattern": "GPT-5.4 1M / commands � @ files � ! shell",
+      "classified_as": "working",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-2-1776287568760.jsonl",
+      "timestamp": "2026-04-15T21:14:26.602Z",
+      "pattern": "Cursor Agent",
+      "classified_as": "ready",
+      "occurrences": 8,
+      "confidence": 0.5383333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-2-1776287568760.jsonl",
+      "timestamp": "2026-04-15T21:14:26.602Z",
+      "pattern": "*-ee4b43a",
+      "classified_as": "ready",
+      "occurrences": 8,
+      "confidence": 0.5383333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-2-1776287568760.jsonl",
+      "timestamp": "2026-04-15T21:14:26.602Z",
+      "pattern": "hint: * to skip all approvals",
+      "classified_as": "ready",
+      "occurrences": 8,
+      "confidence": 0.5383333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776287442211.jsonl",
+      "timestamp": "2026-04-15T21:14:26.602Z",
+      "pattern": "Press Ctrl+C again to exit",
+      "classified_as": "working",
+      "occurrences": 4,
+      "confidence": 0.8600000000000001
+    }
+  ],
+  "metadata": {
+    "terminal_cols": 80,
+    "terminal_rows": 24
+  }
+}

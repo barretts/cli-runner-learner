@@ -1,8 +1,13 @@
-import type { ToolProfile, ToolState, DriveOpts, DriveResult, FifoEvent } from "../types.js";
+import type { ToolProfile, ToolState, DriveOpts, DriveResult, FifoEvent, StateDiff } from "../types.js";
 import { Session, createSessionConfig } from "./session.js";
+import { ToolStateMachine } from "./state-machine.js";
+import { captureState, compareStates } from "../engine/state-verifier.js";
 import { parseTranscript } from "../engine/transcript.js";
 import { VtScreen } from "../vt-screen.js";
 import { stripTermEscapes, deepStripTuiArtifacts, globMatch } from "../term-utils.js";
+import { buildSubPromptAnalysisPrompt } from "../llm/prompts.js";
+import { parseSubPromptAnalysis } from "../llm/parsers.js";
+import { registerSubPrompt } from "../engine/profile-manager.js";
 import { resolve, join } from "node:path";
 import { mkdir } from "node:fs/promises";
 
@@ -36,18 +41,31 @@ export async function drive(
   });
 
   const session = new Session(config);
+  const machine = new ToolStateMachine(profile);
   const startTime = Date.now();
-  let currentState: ToolState = "startup";
   let collectedOutput = "";
   let inputSent = isArgsMode; // args mode: input is already "sent" via args
   let outputSinceInput = false; // track whether tool has produced output after input
+  let recentOutput = ""; // accumulates output since last settled, for LLM sub-prompt analysis
+  const llmClient = opts.llmClient ?? null;
 
   const log = (msg: string) => console.log(`[drive] ${msg}`);
+
+  // Capture pre-execution state for side-effect tracking
+  let beforeState: import("../types.js").StateSnapshot | undefined;
+  if (opts.workDir) {
+    try {
+      beforeState = await captureState(opts.workDir);
+      log(`State tracking: ${opts.workDir} (${beforeState.is_clean ? "clean" : "dirty"})`);
+    } catch (e) {
+      log(`State tracking init failed: ${e}`);
+    }
+  }
 
   try {
     await session.start();
     log(`Session started: ${sessionId}`);
-    log(`State: ${currentState}`);
+    log(`State: ${machine.state}`);
 
     const deadline = Date.now() + opts.max_session_ms;
 
@@ -66,19 +84,25 @@ export async function drive(
             : "";
           const stripped = deepStripTuiArtifacts(stripTermEscapes(text)).trim();
           collectedOutput += stripped + "\n";
+          recentOutput += stripped + "\n";
           if (inputSent && stripped.length > 0) outputSinceInput = true;
 
           // Check for thinking indicators (inline, before profile matching)
-          if (currentState === "working" && isThinkingOutput(stripped)) {
-            log(`State: working -> thinking (detected thinking output)`);
-            currentState = "thinking";
+          if (machine.state === "working" && isThinkingOutput(stripped)) {
+            const prev = machine.state;
+            if (machine.tryTransition("thinking_indicator")) {
+              log(`State: ${prev} -> ${machine.state} (detected thinking output)`);
+            }
           }
 
           // Check for state transitions based on output patterns
-          const newState = matchOutputToState(stripped, text, profile, currentState);
-          if (newState && newState !== currentState) {
-            log(`State: ${currentState} -> ${newState}`);
-            currentState = newState;
+          const matchedState = matchOutputToState(stripped, text, profile, machine.state);
+          if (matchedState && matchedState !== machine.state) {
+            const trigger = `${matchedState}_indicator`;
+            const prev = machine.state;
+            if (machine.tryTransition(trigger)) {
+              log(`State: ${prev} -> ${machine.state}`);
+            }
           }
 
           // Check for prompting sub-states that need auto-response
@@ -91,30 +115,53 @@ export async function drive(
         }
 
         case "settled": {
-          log(`SETTLED after ${event.value}ms in state: ${currentState}`);
+          log(`SETTLED after ${event.value}ms in state: ${machine.state}`);
 
-          if (currentState === "startup" || currentState === "ready") {
+          // LLM sub-prompt fallback: on settled, if output looks prompt-like
+          // but no stored sub-prompt matched, ask LLM for a response
+          if (machine.state === "working" || machine.state === "ready") {
+            if (isPromptLikeOutput(recentOutput) && llmClient && !llmClient.exhausted) {
+              try {
+                const spPrompt = buildSubPromptAnalysisPrompt(recentOutput);
+                const spRaw = await llmClient.complete(spPrompt.system, spPrompt.user);
+                const spParsed = parseSubPromptAnalysis(spRaw);
+                if (spParsed && spParsed.confidence >= 0.6) {
+                  log(`LLM detected sub-prompt: "${spParsed.prompt_text}" -> responding: "${spParsed.suggested_response}"`);
+                  session.sendText(spParsed.suggested_response + "\r");
+                  profile = registerSubPrompt(profile, spParsed);
+                  machine.tryTransition("prompt_indicator");
+                  recentOutput = "";
+                  break;
+                }
+              } catch {
+                // LLM failed -- continue with normal settled logic
+              }
+            }
+          }
+          recentOutput = "";
+
+          if (machine.state === "startup" || machine.state === "ready") {
             if (!inputSent) {
               log(`Sending input: "${opts.input.substring(0, 60)}..."`);
               session.sendText(opts.input + "\r");
               inputSent = true;
-              currentState = "working";
-              log(`State: ready -> working (input sent)`);
+              const prev = machine.state;
+              if (machine.tryTransition("input_sent")) {
+                log(`State: ${prev} -> ${machine.state} (input sent)`);
+              }
             } else {
               log("Tool settled after input was sent. Assuming completed.");
-              currentState = "completed";
+              machine.tryTransition("completion_indicator") || machine.tryTransition("process_exit");
             }
-          } else if (currentState === "thinking") {
-            // Thinking settled -- tool may still produce output, stay in working
+          } else if (machine.state === "thinking") {
             log("Thinking settled. Transitioning to working (awaiting response).");
-            currentState = "working";
-          } else if (currentState === "working") {
+            machine.tryTransition("output_resumed");
+          } else if (machine.state === "working") {
             if (outputSinceInput) {
               log("Tool settled while working (output received). Assuming completed.");
-              currentState = "completed";
+              machine.tryTransition("completion_indicator") || machine.tryTransition("process_exit");
             } else {
               log("Tool settled while working but no output yet. Still waiting...");
-              // Don't transition -- tool may still be processing
             }
           }
 
@@ -123,11 +170,11 @@ export async function drive(
 
         case "exit":
           log(`Process exited (code: ${event.value})`);
-          currentState = "completed";
+          machine.tryTransition("process_exit");
           break;
       }
 
-      if (currentState === "completed" || currentState === "error") {
+      if (machine.state === "completed" || machine.state === "error") {
         break;
       }
     }
@@ -174,12 +221,25 @@ export async function drive(
     log(`Post-session VT extraction failed, using real-time output: ${e}`);
   }
 
+  // Post-execution state comparison
+  let stateDiff: StateDiff | undefined;
+  if (opts.workDir && beforeState) {
+    try {
+      const afterState = await captureState(opts.workDir);
+      stateDiff = await compareStates(opts.workDir, beforeState, afterState);
+      log(`State diff: ${stateDiff.diff_summary}`);
+    } catch (e) {
+      log(`State comparison failed: ${e}`);
+    }
+  }
+
   return {
-    success: currentState === "completed" && inputSent,
-    final_state: currentState,
+    success: machine.state === "completed" && inputSent,
+    final_state: machine.state,
     transcript_path: config.transcript_path,
     output,
     duration_ms,
+    state_diff: stateDiff,
   };
 }
 
@@ -251,4 +311,20 @@ const THINKING_INDICATORS = [
 
 function isThinkingOutput(stripped: string): boolean {
   return THINKING_INDICATORS.some((pat) => pat.test(stripped));
+}
+
+const PROMPT_LIKE_PATTERNS = [
+  /\?\s*$/m,
+  /:\s*$/m,
+  /\(y\/n\)/i,
+  /\[y\/N\]/,
+  /\[Y\/n\]/,
+  /Press.*to continue/i,
+  /Allow/i,
+  /Approve/i,
+  /^\s*\d+[\.\)]\s+/m,
+];
+
+function isPromptLikeOutput(text: string): boolean {
+  return PROMPT_LIKE_PATTERNS.some((pat) => pat.test(text));
 }

@@ -1,0 +1,183 @@
+{
+  "schema_version": "1.0",
+  "tool_id": "opencode",
+  "tool_command": "opencode",
+  "last_updated": "2026-04-15T21:23:47.517Z",
+  "confidence": 0.37142857142857144,
+  "probe_count": 3,
+  "needs_review": true,
+  "interaction_mode": "interactive",
+  "launch": {
+    "default_args": [],
+    "env": {},
+    "needs_pty": true,
+    "startup_timeout_sec": 30
+  },
+  "states": {
+    "startup": {
+      "description": "Tool is initializing",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "[?1016$p[?2027$p[?2031$p[?1004$p[?2004$p[?2026$p"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "���� ��������"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "�������� ����"
+        }
+      ],
+      "timeout_sec": 30
+    },
+    "ready": {
+      "description": "TUI idle screen showing 'Ask anything...' prompt with model selector, tab/ctrl+p shortcuts, and MCP status in footer",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*Ask anything*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*tab agents*ctrl+p commands*"
+        }
+      ]
+    },
+    "working": {
+      "description": "After prompt submission, tool streams a response with thinking/generating indicators",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*Thinking*"
+        }
+      ]
+    },
+    "prompting": {
+      "description": "Tool wants user input",
+      "indicators": [],
+      "sub_prompts": []
+    },
+    "thinking": {
+      "description": "Tool is processing/reasoning",
+      "indicators": []
+    },
+    "completed": {
+      "description": "Tool finished",
+      "indicators": [
+        {
+          "type": "process_exit"
+        }
+      ]
+    },
+    "error": {
+      "description": "Tool errored",
+      "indicators": [
+        {
+          "type": "exit_code_nonzero"
+        }
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "from": "startup",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "startup",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "ready",
+      "to": "working",
+      "on": "input_sent"
+    },
+    {
+      "from": "working",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "working",
+      "to": "thinking",
+      "on": "thinking_indicator"
+    },
+    {
+      "from": "thinking",
+      "to": "working",
+      "on": "output_resumed"
+    },
+    {
+      "from": "working",
+      "to": "completed",
+      "on": "completion_indicator"
+    },
+    {
+      "from": "working",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "*",
+      "to": "error",
+      "on": "error_indicator"
+    },
+    {
+      "from": "*",
+      "to": "completed",
+      "on": "process_exit"
+    }
+  ],
+  "timing": {
+    "typical_startup_sec": 5,
+    "idle_threshold_sec": 8,
+    "max_session_sec": 300
+  },
+  "learned_patterns": [
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-0-1776288142830.jsonl",
+      "timestamp": "2026-04-15T21:23:47.514Z",
+      "pattern": "[?1016$p[?2027$p[?2031$p[?1004$p[?2004$p[?2026$p",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-0-1776288142830.jsonl",
+      "timestamp": "2026-04-15T21:23:47.514Z",
+      "pattern": "���� ��������",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-0-1776288142830.jsonl",
+      "timestamp": "2026-04-15T21:23:47.514Z",
+      "pattern": "�������� ����",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    }
+  ],
+  "discovery": {
+    "help_text": "oolean]\n-s, --session session id to continue tring]\n--fork fork the session when continuing (use with --continue or --session) oolean]\n--prompt prompt to use tring]\n--agent agent to use tring]",
+    "parsed_description": "Interactive AI agent CLI with session management and prompt/agent selection",
+    "subcommands": [],
+    "common_flags": [
+      "-s, --session",
+      "--fork",
+      "--prompt",
+      "--agent"
+    ],
+    "interactive": true,
+    "discovered_at": "2026-04-15T21:22:13.256Z"
+  },
+  "metadata": {
+    "terminal_cols": 80,
+    "terminal_rows": 24
+  }
+}

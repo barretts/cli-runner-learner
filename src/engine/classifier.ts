@@ -1,5 +1,9 @@
 import type { TranscriptSegment, ClassifiedSegment, ToolState, ToolProfile } from "../types.js";
 import { globMatch } from "../term-utils.js";
+import type { LLMClient } from "../llm/client.js";
+import { buildClassifierPrompt, buildSubPromptAnalysisPrompt } from "../llm/prompts.js";
+import { parseClassification, parseSubPromptAnalysis } from "../llm/parsers.js";
+import type { ParsedSubPrompt } from "../llm/parsers.js";
 
 /**
  * Prompt-like patterns -- lines ending with question marks, colons,
@@ -58,11 +62,14 @@ interface ClassifyContext {
 /**
  * Classify transcript segments into tool states using heuristic rules.
  * When a profile exists, its state indicators take priority.
+ * When an LLM client is provided, ambiguous classifications (confidence < 0.3)
+ * are sent to the LLM for a second opinion.
  */
-export function classifySegments(
+export async function classifySegments(
   segments: TranscriptSegment[],
   profile?: ToolProfile,
-): ClassifiedSegment[] {
+  llmClient?: LLMClient | null,
+): Promise<ClassifiedSegment[]> {
   const results: ClassifiedSegment[] = [];
   const hasExit = segments.some((s) =>
     s.events.some((e) => e.type === "meta" && e.event === "exit"),
@@ -79,17 +86,85 @@ export function classifySegments(
       hasExitEvent: hasExit,
     };
 
-    const [state, confidence, reason] = classifyOne(seg, ctx, profile);
+    let [state, confidence, reason] = classifyOne(seg, ctx, profile);
+
+    // LLM fallback for ambiguous classifications
+    if (confidence < 0.3 && llmClient && !llmClient.exhausted && profile) {
+      try {
+        const prompt = buildClassifierPrompt(seg.stripped_text, profile.states, {
+          segmentIndex: i,
+          totalSegments: segments.length,
+          prevState: ctx.prevState,
+        });
+        const raw = await llmClient.complete(prompt.system, prompt.user);
+        const parsed = parseClassification(raw);
+        if (parsed && parsed.confidence > confidence) {
+          state = parsed.state;
+          confidence = parsed.confidence;
+          reason = `LLM: ${parsed.reason}`;
+        }
+      } catch {
+        // LLM call failed -- keep heuristic result
+      }
+    }
+
+    // When classified as prompting, try to extract sub-prompt details via LLM
+    let detectedSubPrompt: ParsedSubPrompt | undefined;
+    if (state === "prompting" && llmClient && !llmClient.exhausted) {
+      try {
+        const spPrompt = buildSubPromptAnalysisPrompt(seg.stripped_text);
+        const spRaw = await llmClient.complete(spPrompt.system, spPrompt.user);
+        const spParsed = parseSubPromptAnalysis(spRaw);
+        if (spParsed && spParsed.confidence >= 0.5) {
+          detectedSubPrompt = spParsed;
+        }
+      } catch {
+        // LLM sub-prompt analysis failed -- continue without it
+      }
+    }
 
     results.push({
       ...seg,
       state,
       confidence,
       reason,
+      detectedSubPrompt,
     });
   }
 
-  return results;
+  // Post-processing: long THINKING segments in TUI tools typically contain both
+  // spinner output AND response/tool-use output. The TUI re-renders the full
+  // screen each frame, so `(thinking)` persists in every frame even after the
+  // response starts streaming. Event-level splitting fails because thinking
+  // patterns appear in nearly every frame.
+  //
+  // Instead, emit a parallel WORKING segment from the same text when the segment
+  // is long enough to contain response content. Pattern extraction will pull
+  // different n-grams for each state (thinking patterns vs. response content).
+  const postProcessed: ClassifiedSegment[] = [];
+  for (const seg of results) {
+    if (seg.state !== "thinking") {
+      postProcessed.push(seg);
+      continue;
+    }
+
+    const duration = seg.end_ts - seg.start_ts;
+    if (duration > 3000 && seg.stripped_text.length > 100) {
+      // Keep the thinking classification
+      postProcessed.push(seg);
+      // Emit a parallel working segment for pattern extraction
+      postProcessed.push({
+        ...seg,
+        state: "working",
+        confidence: 0.5,
+        reason: "parallel working: long thinking segment likely contains response output",
+      });
+    } else {
+      postProcessed.push(seg);
+    }
+  }
+
+  return postProcessed;
 }
 
 function classifyOne(
@@ -140,6 +215,14 @@ function classifyOne(
       return ["ready", 0.6, "first segment settled (tool showing prompt)"];
     }
     return ["startup", 0.7, "first segment, no input sent"];
+  }
+
+  // 6.5. Settle with minimal text after startup -> ready
+  // Interactive tools like Claude show a startup banner then go silent at the prompt.
+  // After settle-based splitting (transcript.ts step 4), this produces a segment
+  // with the settle event and little/no visible text.
+  if (hasSettled && !hasSendEvents && text.length < 20 && ctx.prevState === "startup") {
+    return ["ready", 0.65, "settled after startup with minimal output"];
   }
 
   // 7. Prompt patterns

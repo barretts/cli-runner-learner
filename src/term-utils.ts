@@ -50,6 +50,59 @@ export function deepStripTuiArtifacts(text: string): string {
   return result;
 }
 
+// ---- Diagnostic Line Extraction ----
+// Ported from 3pp-fix-database/src/orchestrator.ts.
+
+const DIAGNOSTIC_PATTERNS = /\b(error|erro|err|fail|fatal|exception|panic|cannot|could not|unable|refused|denied|missing|not found|no such|timeout|timed out|crash|abort|reject|invalid|undefined|null|broken|corrupt|mismatch|incompatible|deprecated|warning|warn|problem|unexpected|unhandled|traceback|stack trace|ENOENT|EACCES|EPERM|ECONNREFUSED|ETIMEDOUT|E2BIG|ENOMEM|exitcode|exit code|non-zero|killed|signal|segfault|oom)\b/i;
+
+/**
+ * Extract diagnostic lines (errors/warnings + context) from raw terminal output.
+ * Returns a formatted string capped at 5000 chars for use in healer prompts.
+ */
+export function extractDiagnosticLines(raw: string): string {
+  const clean = stripTermEscapes(raw);
+  const lines = clean.split("\n");
+
+  const diagnostics: string[] = [];
+  const CONTEXT_LINES = 1;
+  const seen = new Set<number>();
+
+  for (let i = 0; i < lines.length; i++) {
+    if (DIAGNOSTIC_PATTERNS.test(lines[i])) {
+      const start = Math.max(0, i - CONTEXT_LINES);
+      const end = Math.min(lines.length - 1, i + CONTEXT_LINES);
+      for (let j = start; j <= end; j++) {
+        if (!seen.has(j) && lines[j].trim().length > 0) {
+          seen.add(j);
+          diagnostics.push(lines[j].trimEnd());
+        }
+      }
+    }
+  }
+
+  // Last 10 non-empty lines as tail context
+  const tail: string[] = [];
+  for (let i = lines.length - 1; i >= 0 && tail.length < 10; i--) {
+    if (lines[i].trim().length > 0) {
+      tail.unshift(lines[i].trimEnd());
+    }
+  }
+
+  const parts: string[] = [];
+  if (diagnostics.length > 0) {
+    const capped = diagnostics.length > 60
+      ? [...diagnostics.slice(0, 30), `... (${diagnostics.length - 60} more diagnostic lines) ...`, ...diagnostics.slice(-30)]
+      : diagnostics;
+    parts.push("--- DIAGNOSTIC LINES (errors/warnings) ---");
+    parts.push(...capped);
+  }
+  parts.push("--- LAST 10 LINES ---");
+  parts.push(...tail);
+
+  const result = parts.join("\n");
+  return result.length > 5000 ? result.slice(0, 5000) + "\n... (truncated)" : result;
+}
+
 /**
  * Match a glob pattern against text. Supports * (match anything) only.
  * Case-insensitive matching when caseInsensitive is true.

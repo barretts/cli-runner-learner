@@ -169,7 +169,43 @@ export function segmentByFrames(
     segments.push(mergeFramesIntoSegment(segFrames));
   }
 
-  return segments;
+  // Step 4: Split segments at settle event boundaries.
+  // Without this, a 5s silence (settle) followed by a send and response output
+  // lands in one segment. Splitting at settle boundaries separates startup from
+  // ready, and working from the exit sequence.
+  const splitSegments: TranscriptSegment[] = [];
+  for (const seg of segments) {
+    const settleIndices: number[] = [];
+    for (let i = 0; i < seg.events.length; i++) {
+      const e = seg.events[i];
+      if (e.type === "meta" && e.event === "settled") {
+        settleIndices.push(i);
+      }
+    }
+
+    if (settleIndices.length === 0) {
+      splitSegments.push(seg);
+      continue;
+    }
+
+    let startIdx = 0;
+    for (const settleIdx of settleIndices) {
+      const slice = seg.events.slice(startIdx, settleIdx + 1);
+      if (slice.length > 0) {
+        splitSegments.push(buildSegment(slice));
+      }
+      startIdx = settleIdx + 1;
+    }
+
+    if (startIdx < seg.events.length) {
+      const remaining = seg.events.slice(startIdx);
+      if (remaining.length > 0) {
+        splitSegments.push(buildSegment(remaining));
+      }
+    }
+  }
+
+  return splitSegments;
 }
 
 function buildFrame(events: TranscriptEvent[]): {
