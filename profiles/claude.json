@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0",
+  "tool_id": "claude",
+  "tool_command": "/Users/bsonntag/.local/bin/claude",
+  "last_updated": "2026-04-15T18:42:22.465Z",
+  "confidence": 0.52,
+  "probe_count": 3,
+  "needs_review": false,
+  "launch": {
+    "default_args": [],
+    "env": {},
+    "needs_pty": true,
+    "startup_timeout_sec": 30
+  },
+  "states": {
+    "startup": {
+      "description": "Tool is initializing",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "Claude Code*nTips"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Code*nTips for"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "for getting"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "getting startedWelcome"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "startedWelcome back!Run*"
+        }
+      ],
+      "timeout_sec": 30
+    },
+    "ready": {
+      "description": "Tool is waiting for input",
+      "indicators": []
+    },
+    "working": {
+      "description": "Tool is actively processing",
+      "indicators": []
+    },
+    "prompting": {
+      "description": "Tool wants user input",
+      "indicators": [],
+      "sub_prompts": []
+    },
+    "thinking": {
+      "description": "Tool is processing/reasoning",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "o hello =Pouncing& o�esc to interrupt"
+        }
+      ]
+    },
+    "completed": {
+      "description": "Tool finished",
+      "indicators": [
+        {
+          "type": "process_exit"
+        }
+      ]
+    },
+    "error": {
+      "description": "Tool errored",
+      "indicators": [
+        {
+          "type": "exit_code_nonzero"
+        }
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "from": "startup",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "startup",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "ready",
+      "to": "working",
+      "on": "input_sent"
+    },
+    {
+      "from": "working",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "working",
+      "to": "thinking",
+      "on": "thinking_indicator"
+    },
+    {
+      "from": "thinking",
+      "to": "working",
+      "on": "output_resumed"
+    },
+    {
+      "from": "working",
+      "to": "completed",
+      "on": "completion_indicator"
+    },
+    {
+      "from": "working",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "*",
+      "to": "error",
+      "on": "error_indicator"
+    },
+    {
+      "from": "*",
+      "to": "completed",
+      "on": "process_exit"
+    }
+  ],
+  "timing": {
+    "typical_startup_sec": 5,
+    "idle_threshold_sec": 8,
+    "max_session_sec": 300
+  },
+  "learned_patterns": [
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
+      "timestamp": "2026-04-15T18:42:22.464Z",
+      "pattern": "Claude Code*nTips",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
+      "timestamp": "2026-04-15T18:42:22.465Z",
+      "pattern": "Code*nTips for",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
+      "timestamp": "2026-04-15T18:42:22.465Z",
+      "pattern": "for getting",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
+      "timestamp": "2026-04-15T18:42:22.465Z",
+      "pattern": "getting startedWelcome",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
+      "timestamp": "2026-04-15T18:42:22.465Z",
+      "pattern": "startedWelcome back!Run*",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776278523364.jsonl",
+      "timestamp": "2026-04-15T18:42:22.465Z",
+      "pattern": "o hello =Pouncing& o�esc to interrupt",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    }
+  ],
+  "metadata": {
+    "terminal_cols": 80,
+    "terminal_rows": 24
+  }
+}
