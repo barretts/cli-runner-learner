@@ -1,78 +1,43 @@
 {
   "schema_version": "1.0",
-  "session_id": "gemini-learn-1776287672971",
+  "session_id": "gemini-learn-1776319087934",
   "tool_id": "gemini",
-  "tool_command": "/Users/bsonntag/.nvm/versions/node/v20.19.6/bin/gemini",
-  "started_at": "2026-04-15T21:14:32.971Z",
-  "updated_at": "2026-04-15T21:19:24.879Z",
+  "tool_command": "gemini",
+  "started_at": "2026-04-16T05:58:07.934Z",
+  "updated_at": "2026-04-16T05:58:40.644Z",
   "status": "COMPLETED",
-  "current_round": 5,
+  "current_round": 3,
   "max_rounds": 8,
   "confidence_threshold": 0.8,
   "confidence_history": [
-    0.44523809523809516,
-    0.44523809523809516,
-    0.5019841269841269,
-    0.5069444444444444,
+    0.5118055555555555,
+    0.5118055555555555,
     0.5118055555555555
   ],
   "completed_probes": [
     {
       "round": 0,
       "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-0-1776287681312.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776319096806.jsonl",
       "states_observed": [
-        "startup",
-        "prompting",
-        "prompting",
-        "prompting"
+        "completed"
       ]
     },
     {
       "round": 1,
       "strategy": "input",
-      "input_text": "What is 2+2?",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-1-1776287764638.jsonl",
+      "input_text": "hello",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-1-1776319106037.jsonl",
       "states_observed": [
-        "startup",
-        "prompting",
-        "prompting",
-        "prompting",
-        "prompting",
-        "prompting"
+        "completed"
       ]
     },
     {
       "round": 2,
       "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-2-1776287885581.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-2-1776319120121.jsonl",
       "states_observed": [
-        "startup",
-        "startup",
-        "ready",
-        "startup"
-      ]
-    },
-    {
-      "round": 3,
-      "strategy": "input",
-      "input_text": "Write a haiku about the ocean and explain the syllable count for each line.",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-3-1776287909864.jsonl",
-      "states_observed": [
-        "startup",
-        "startup",
-        "startup",
-        "ready",
-        "startup"
-      ]
-    },
-    {
-      "round": 4,
-      "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-4-1776287954212.jsonl",
-      "states_observed": [
-        "startup",
-        "startup"
+        "completed"
       ]
     }
   ],
@@ -80,33 +45,21 @@
     {
       "round": 1,
       "failure_signatures": [
-        "state_gap:startup has zero learned patterns",
         "state_gap:ready has zero learned patterns",
         "state_gap:thinking has zero learned patterns"
       ],
       "decision": "RETRY",
-      "patches_applied": 7,
-      "timestamp": "2026-04-15T21:18:05.580Z"
-    },
-    {
-      "round": 3,
-      "failure_signatures": [
-        "state_gap:ready has zero learned patterns",
-        "state_gap:thinking has zero learned patterns"
-      ],
-      "decision": "RETRY",
-      "patches_applied": 9,
-      "timestamp": "2026-04-15T21:19:14.211Z"
+      "patches_applied": 2,
+      "timestamp": "2026-04-16T05:58:40.119Z"
     }
   ],
   "failure_signatures_seen": [
-    "state_gap:startup has zero learned patterns",
     "state_gap:ready has zero learned patterns",
     "state_gap:thinking has zero learned patterns"
   ],
   "config": {
-    "settle_timeout_ms": 5000,
-    "max_probe_session_ms": 30000,
+    "settle_timeout_ms": 3000,
+    "max_probe_session_ms": 45000,
     "heal_mode": "auto",
     "max_heal_rounds": 4
   },

@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "tool_id": "gemini",
   "tool_command": "/Users/bsonntag/.nvm/versions/node/v20.19.6/bin/gemini",
-  "last_updated": "2026-04-15T21:19:24.883Z",
+  "last_updated": "2026-04-16T05:58:40.645Z",
   "confidence": 0.5118055555555555,
-  "probe_count": 9,
+  "probe_count": 12,
   "needs_review": false,
   "interaction_mode": "interactive",
   "launch": {
@@ -214,7 +214,7 @@
     }
   ],
   "metadata": {
-    "terminal_cols": 80,
-    "terminal_rows": 24
+    "terminal_cols": 85,
+    "terminal_rows": 30
   }
 }

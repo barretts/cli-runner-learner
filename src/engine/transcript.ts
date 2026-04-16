@@ -6,8 +6,10 @@ import { stripTermEscapes, deepStripTuiArtifacts } from "../term-utils.js";
  * Parse a JSONL transcript file into structured events.
  */
 export async function parseTranscript(path: string): Promise<TranscriptEvent[]> {
+  console.log(`[transcript] Parsing: ${path}`);
   const raw = await readFile(path, "utf-8");
   const events: TranscriptEvent[] = [];
+  let malformed = 0;
 
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
@@ -15,9 +17,17 @@ export async function parseTranscript(path: string): Promise<TranscriptEvent[]> 
     try {
       events.push(JSON.parse(trimmed) as TranscriptEvent);
     } catch {
-      // skip malformed lines
+      malformed++;
     }
   }
+
+  const typeCounts: Record<string, number> = {};
+  for (const e of events) {
+    typeCounts[e.type] = (typeCounts[e.type] ?? 0) + 1;
+  }
+  const duration = events.length > 1 ? events[events.length - 1].ts - events[0].ts : 0;
+  console.log(`[transcript] Parsed ${events.length} events (${malformed} malformed), duration=${duration}ms`);
+  console.log(`[transcript] Types: ${Object.entries(typeCounts).map(([t, c]) => `${t}:${c}`).join(', ')}`);
 
   return events;
 }
@@ -101,7 +111,8 @@ export function segmentByFrames(
   const frameMs = opts.frame_ms ?? 50;
   const gapMs = opts.gap_ms ?? 2000;
 
-  if (events.length === 0) return [];
+  console.log(`[transcript] segmentByFrames: ${events.length} events, frame=${frameMs}ms, gap=${gapMs}ms`);
+  if (events.length === 0) { console.log(`[transcript] No events to segment`); return []; }
 
   // Step 1: Group recv events into render frames
   const frames: Array<{ ts: number; events: TranscriptEvent[]; text: string }> = [];
@@ -203,6 +214,13 @@ export function segmentByFrames(
         splitSegments.push(buildSegment(remaining));
       }
     }
+  }
+
+  console.log(`[transcript] segmentByFrames result: ${frames.length} frames -> ${deduped.length} deduped -> ${segments.length} gap-segments -> ${splitSegments.length} final segments`);
+  for (let i = 0; i < splitSegments.length; i++) {
+    const s = splitSegments[i];
+    const dur = s.end_ts - s.start_ts;
+    console.log(`[transcript]   Segment ${i}: ${dur}ms, ${s.events.length} events, ${s.stripped_text.length} chars text`);
   }
 
   return splitSegments;

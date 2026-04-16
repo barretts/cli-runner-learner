@@ -137,12 +137,17 @@ export function mergeLearnedPatterns(
   newPatterns: LearnedPattern[],
   metadata?: { tool_version?: string; terminal_cols?: number; terminal_rows?: number },
 ): ToolProfile {
+  console.log(`[profile] Merging ${newPatterns.length} new patterns into profile (probe_count=${profile.probe_count}, existing=${profile.learned_patterns.length})`);
   const updated = structuredClone(profile);
   updated.probe_count++;
 
   if (metadata) {
     updated.metadata = { ...updated.metadata, ...metadata };
   }
+
+  let mergedCount = 0;
+  let addedCount = 0;
+  let promotedCount = 0;
 
   for (const pattern of newPatterns) {
     // Add to learned_patterns list
@@ -152,11 +157,16 @@ export function mergeLearnedPatterns(
 
     if (existing) {
       // Update existing pattern: average confidence, increment occurrences
+      const oldConf = existing.confidence;
       existing.occurrences += pattern.occurrences;
       existing.confidence = (existing.confidence + pattern.confidence) / 2;
       existing.timestamp = pattern.timestamp;
+      mergedCount++;
+      console.log(`[profile]   Merged: [${pattern.classified_as}] "${pattern.pattern}" conf ${(oldConf*100).toFixed(0)}% -> ${(existing.confidence*100).toFixed(0)}%, occ=${existing.occurrences}`);
     } else {
       updated.learned_patterns.push(pattern);
+      addedCount++;
+      console.log(`[profile]   Added: [${pattern.classified_as}] "${pattern.pattern}" conf=${(pattern.confidence*100).toFixed(0)}%, occ=${pattern.occurrences}`);
     }
 
     // Promote high-confidence patterns to state indicators
@@ -177,10 +187,15 @@ export function mergeLearnedPatterns(
 
         if (!alreadyExists) {
           stateDef.indicators.push(indicator);
+          promotedCount++;
+          console.log(`[profile]   Promoted to indicator: [${stateName}] "${pattern.pattern}"`);
         }
       }
     }
   }
+
+  console.log(`[profile] Merge summary: ${addedCount} added, ${mergedCount} merged, ${promotedCount} promoted to indicators`);
+  console.log(`[profile] Total learned patterns: ${updated.learned_patterns.length}`);
 
   // Recompute overall confidence
   updated.confidence = computeProfileConfidence(updated);
@@ -300,6 +315,8 @@ function computeProfileConfidence(profile: ToolProfile): number {
   let totalScore = 0;
   let stateCount = 0;
 
+  console.log(`[profile] Computing confidence breakdown:`);
+
   for (const stateName of patternStates) {
     const state = profile.states[stateName];
     if (!state) continue;
@@ -314,10 +331,14 @@ function computeProfileConfidence(profile: ToolProfile): number {
       const avgConf =
         statePatterns.reduce((sum, p) => sum + p.confidence, 0) / statePatterns.length;
       totalScore += avgConf;
+      console.log(`[profile]   ${stateName}: ${statePatterns.length} patterns, avgConf=${(avgConf*100).toFixed(1)}%, indicators=${state.indicators.length}`);
     } else if (state.indicators.some((ind) => ind.type === "silence_after_output_ms")) {
       // Structural indicator: state is identified by silence/timing, not text.
       // Give partial credit -- the state is known but not text-anchored.
       totalScore += 0.6;
+      console.log(`[profile]   ${stateName}: structural (silence) -> 0.60, indicators=${state.indicators.length}`);
+    } else {
+      console.log(`[profile]   ${stateName}: NO patterns, NO structural -> 0.00, indicators=${state.indicators.length}`);
     }
   }
 
@@ -329,8 +350,13 @@ function computeProfileConfidence(profile: ToolProfile): number {
     // These states work via event detection, not text patterns
     if (state.indicators.length > 0) {
       totalScore += 0.8;
+      console.log(`[profile]   ${stateName}: structural event -> 0.80, indicators=${state.indicators.length}`);
+    } else {
+      console.log(`[profile]   ${stateName}: NO indicators -> 0.00`);
     }
   }
 
-  return stateCount > 0 ? totalScore / stateCount : 0;
+  const confidence = stateCount > 0 ? totalScore / stateCount : 0;
+  console.log(`[profile] Overall: totalScore=${totalScore.toFixed(2)} / ${stateCount} states = ${(confidence*100).toFixed(1)}%`);
+  return confidence;
 }

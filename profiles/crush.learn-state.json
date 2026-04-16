@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0",
-  "session_id": "crush-learn-1776287971403",
+  "session_id": "crush-learn-1776318885133",
   "tool_id": "crush",
   "tool_command": "crush",
-  "started_at": "2026-04-15T21:19:31.403Z",
-  "updated_at": "2026-04-15T21:21:53.078Z",
+  "started_at": "2026-04-16T05:54:45.133Z",
+  "updated_at": "2026-04-16T05:55:17.099Z",
   "status": "COMPLETED",
   "current_round": 3,
   "max_rounds": 8,
@@ -18,30 +18,24 @@
     {
       "round": 0,
       "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-0-1776287982962.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776318893945.jsonl",
       "states_observed": [
-        "startup",
-        "ready",
         "completed"
       ]
     },
     {
       "round": 1,
       "strategy": "enter",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-1-1776288000761.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776318901985.jsonl",
       "states_observed": [
-        "startup",
-        "ready",
         "completed"
       ]
     },
     {
       "round": 2,
-      "strategy": "enter",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-2-1776288066858.jsonl",
+      "strategy": "observe",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-2-1776318916577.jsonl",
       "states_observed": [
-        "startup",
-        "ready",
         "completed"
       ]
     }
@@ -56,8 +50,8 @@
         "state_gap:prompting has zero learned patterns"
       ],
       "decision": "RETRY",
-      "patches_applied": 0,
-      "timestamp": "2026-04-15T21:21:06.857Z"
+      "patches_applied": 2,
+      "timestamp": "2026-04-16T05:55:16.575Z"
     }
   ],
   "failure_signatures_seen": [
@@ -67,7 +61,7 @@
     "state_gap:prompting has zero learned patterns"
   ],
   "config": {
-    "settle_timeout_ms": 5000,
+    "settle_timeout_ms": 3000,
     "max_probe_session_ms": 45000,
     "heal_mode": "auto",
     "max_heal_rounds": 4
