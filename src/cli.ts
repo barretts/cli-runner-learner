@@ -263,7 +263,13 @@ program
     const llmClient = createLLMClient();
     const healerLlmClient = healMode !== "off" ? createLLMClient() : null;
 
+    console.log(`[learn] Settings: settleMs=${settleMs}, maxProbeMs=${maxProbeMs}, healMode=${healMode}, maxHealRounds=${maxHealRounds}`);
+    console.log(`[learn] Interaction mode: ${interactionMode}`);
+
     let profile = await loadProfile(toolId);
+    if (profile) {
+      console.log(`[learn] Loaded existing profile: confidence=${(profile.confidence*100).toFixed(1)}%, patterns=${profile.learned_patterns.length}, probes=${profile.probe_count}`);
+    }
     if (!profile) {
       // Run discovery before bootstrapping
       console.log(`[learn] No existing profile. Running discovery...`);
@@ -334,6 +340,10 @@ program
         session_id: sessionId,
       });
 
+      console.log(`[learn] Session config: settle=${settleMs}ms, maxProbe=${maxProbeMs}ms`);
+      console.log(`[learn] Transcript: ${config.transcript_path}`);
+
+      const probeStartTime = Date.now();
       const session = new Session(config);
 
       try {
@@ -342,6 +352,7 @@ program
       } finally {
         await session.cleanup();
       }
+      console.log(`[learn] Probe completed in ${((Date.now() - probeStartTime) / 1000).toFixed(1)}s`);
 
       // Parse and classify
       try {
@@ -680,25 +691,47 @@ async function executeProbeStrategy(
 
 async function waitForSettled(session: Session, maxMs: number): Promise<void> {
   const deadline = Date.now() + maxMs;
+  const startTime = Date.now();
+  let eventCount = 0;
+  console.log(`[wait] waitForSettled: maxMs=${maxMs}`);
   while (!session.done && Date.now() < deadline) {
-    const event = await session.nextEvent(Math.min(maxMs, deadline - Date.now()));
-    if (event.type === "settled") return;
-    if (event.type === "exit") return;
+    const remaining = Math.min(maxMs, deadline - Date.now());
+    const event = await session.nextEvent(remaining);
+    eventCount++;
+    if (event.type === "settled") {
+      console.log(`[wait] Settled after ${eventCount} events, ${Date.now() - startTime}ms`);
+      return;
+    }
+    if (event.type === "exit") {
+      console.log(`[wait] Exit after ${eventCount} events, ${Date.now() - startTime}ms`);
+      return;
+    }
   }
+  console.log(`[wait] waitForSettled timed out after ${eventCount} events, ${Date.now() - startTime}ms (done=${session.done})`);
 }
 
 async function waitForSettledAndExit(session: Session, maxMs: number): Promise<void> {
+  console.log(`[wait] waitForSettledAndExit: maxMs=${maxMs}`);
   await waitForSettled(session, maxMs);
   if (!session.done) {
+    console.log(`[wait] Not done after settle -- sending ctrl-c x2`);
     session.sendCtrlC();
     await new Promise((r) => setTimeout(r, 500));
     session.sendCtrlC();
     // Wait for exit
     const deadline = Date.now() + 5000;
+    let exitWaitEvents = 0;
     while (!session.done && Date.now() < deadline) {
       const event = await session.nextEvent(1000);
-      if (event.type === "exit") break;
+      exitWaitEvents++;
+      if (event.type === "exit") {
+        console.log(`[wait] Exit received after ${exitWaitEvents} events`);
+        break;
+      }
     }
+    if (!session.done) console.log(`[wait] Exit wait timed out after ${exitWaitEvents} events`);
+  } else {
+    console.log(`[wait] Session already done after settle`);
   }
 }
 

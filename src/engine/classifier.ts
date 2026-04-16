@@ -70,13 +70,30 @@ export async function classifySegments(
   profile?: ToolProfile,
   llmClient?: LLMClient | null,
 ): Promise<ClassifiedSegment[]> {
+  console.log(`[classify] Classifying ${segments.length} segments, profile=${profile ? profile.tool_id : 'none'}, LLM=${!!llmClient}`);
+  if (profile) {
+    const indicatorCounts = Object.entries(profile.states).map(([s, d]) => `${s}:${d.indicators.length}`).join(', ');
+    console.log(`[classify] Profile indicators: ${indicatorCounts}`);
+    console.log(`[classify] Profile learned patterns: ${profile.learned_patterns.length}`);
+  }
+
   const results: ClassifiedSegment[] = [];
   const hasExit = segments.some((s) =>
     s.events.some((e) => e.type === "meta" && e.event === "exit"),
   );
+  console.log(`[classify] Has exit event: ${hasExit}`);
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
+    const duration = seg.end_ts - seg.start_ts;
+    const recvCount = seg.events.filter(e => e.type === "recv").length;
+    const metaEvents = seg.events.filter(e => e.type === "meta").map(e => e.event).join(',');
+    const textPreview = seg.stripped_text.substring(0, 100).replace(/\n/g, '\\n');
+    console.log(`[classify] --- Segment ${i}/${segments.length} ---`);
+    console.log(`[classify]   Duration: ${duration}ms, ${seg.events.length} events (${recvCount} recv), text: ${seg.stripped_text.length} chars`);
+    console.log(`[classify]   Meta events: ${metaEvents || 'none'}`);
+    console.log(`[classify]   Text preview: "${textPreview}"`);
+
     const ctx: ClassifyContext = {
       segmentIndex: i,
       totalSegments: segments.length,
@@ -85,44 +102,57 @@ export async function classifySegments(
       prevState: i > 0 ? results[i - 1].state : undefined,
       hasExitEvent: hasExit,
     };
+    console.log(`[classify]   Context: first=${ctx.isFirstSegment}, last=${ctx.isLastSegment}, prev=${ctx.prevState ?? 'none'}`);
 
     let [state, confidence, reason] = classifyOne(seg, ctx, profile);
+    console.log(`[classify]   Heuristic result: ${state} (${(confidence * 100).toFixed(0)}%) -- ${reason}`);
 
     // LLM fallback for ambiguous classifications
     if (confidence < 0.3 && llmClient && !llmClient.exhausted && profile) {
+      console.log(`[classify]   Low confidence (${(confidence*100).toFixed(0)}% < 30%) -- trying LLM fallback`);
       try {
         const prompt = buildClassifierPrompt(seg.stripped_text, profile.states, {
           segmentIndex: i,
           totalSegments: segments.length,
           prevState: ctx.prevState,
         });
+        console.log(`[classify]   LLM prompt lengths: system=${prompt.system.length}, user=${prompt.user.length}`);
         const raw = await llmClient.complete(prompt.system, prompt.user);
+        console.log(`[classify]   LLM response: ${raw.length} chars`);
         const parsed = parseClassification(raw);
         if (parsed && parsed.confidence > confidence) {
+          console.log(`[classify]   LLM override: ${state} -> ${parsed.state} (${(parsed.confidence*100).toFixed(0)}%) -- ${parsed.reason}`);
           state = parsed.state;
           confidence = parsed.confidence;
           reason = `LLM: ${parsed.reason}`;
+        } else {
+          console.log(`[classify]   LLM result not better: ${parsed ? `${parsed.state} (${(parsed.confidence*100).toFixed(0)}%)` : 'parse failed'}`);
         }
-      } catch {
-        // LLM call failed -- keep heuristic result
+      } catch (e) {
+        console.log(`[classify]   LLM fallback failed: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
     // When classified as prompting, try to extract sub-prompt details via LLM
     let detectedSubPrompt: ParsedSubPrompt | undefined;
     if (state === "prompting" && llmClient && !llmClient.exhausted) {
+      console.log(`[classify]   Prompting state detected -- analyzing sub-prompt via LLM`);
       try {
         const spPrompt = buildSubPromptAnalysisPrompt(seg.stripped_text);
         const spRaw = await llmClient.complete(spPrompt.system, spPrompt.user);
         const spParsed = parseSubPromptAnalysis(spRaw);
         if (spParsed && spParsed.confidence >= 0.5) {
           detectedSubPrompt = spParsed;
+          console.log(`[classify]   Sub-prompt: type=${spParsed.prompt_type}, response="${spParsed.suggested_response}", conf=${(spParsed.confidence*100).toFixed(0)}%`);
+        } else {
+          console.log(`[classify]   Sub-prompt analysis: ${spParsed ? `low confidence (${(spParsed.confidence*100).toFixed(0)}%)` : 'parse failed'}`);
         }
-      } catch {
-        // LLM sub-prompt analysis failed -- continue without it
+      } catch (e) {
+        console.log(`[classify]   Sub-prompt LLM failed: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
+    console.log(`[classify]   FINAL: ${state} (${(confidence * 100).toFixed(0)}%) -- ${reason}`);
     results.push({
       ...seg,
       state,
@@ -142,6 +172,7 @@ export async function classifySegments(
   // is long enough to contain response content. Pattern extraction will pull
   // different n-grams for each state (thinking patterns vs. response content).
   const postProcessed: ClassifiedSegment[] = [];
+  let thinkingSplitCount = 0;
   for (const seg of results) {
     if (seg.state !== "thinking") {
       postProcessed.push(seg);
@@ -159,10 +190,22 @@ export async function classifySegments(
         confidence: 0.5,
         reason: "parallel working: long thinking segment likely contains response output",
       });
+      thinkingSplitCount++;
     } else {
       postProcessed.push(seg);
     }
   }
+
+  if (thinkingSplitCount > 0) {
+    console.log(`[classify] Post-processing: split ${thinkingSplitCount} long thinking segments into thinking+working pairs`);
+  }
+
+  // Summary
+  const stateCounts: Record<string, number> = {};
+  for (const seg of postProcessed) {
+    stateCounts[seg.state] = (stateCounts[seg.state] ?? 0) + 1;
+  }
+  console.log(`[classify] Result: ${postProcessed.length} segments -- ${Object.entries(stateCounts).map(([s, c]) => `${s}:${c}`).join(', ')}`);
 
   return postProcessed;
 }
@@ -256,15 +299,19 @@ function matchProfileIndicators(
   text: string,
   profile: ToolProfile,
 ): [ToolState, number, string] | null {
+  let checkedCount = 0;
   for (const [stateName, stateDef] of Object.entries(profile.states)) {
     for (const indicator of stateDef.indicators) {
       if (indicator.type === "output_glob" && indicator.pattern) {
+        checkedCount++;
         if (globMatch(indicator.pattern, text, indicator.case_insensitive)) {
+          console.log(`[classify]   Profile match: ${stateName} via full-text glob "${indicator.pattern}"`);
           return [stateName as ToolState, 0.85, `profile glob: ${indicator.pattern}`];
         }
         // Also check if the pattern appears anywhere in the text (substring glob match)
         for (const line of text.split("\n")) {
           if (globMatch(indicator.pattern, line.trim(), indicator.case_insensitive)) {
+            console.log(`[classify]   Profile match: ${stateName} via line glob "${indicator.pattern}" on line "${line.trim().substring(0, 60)}"`);
             return [stateName as ToolState, 0.8, `profile glob (line): ${indicator.pattern}`];
           }
         }
@@ -276,8 +323,10 @@ function matchProfileIndicators(
       for (const sp of stateDef.sub_prompts) {
         for (const indicator of sp.indicators) {
           if (indicator.type === "output_glob" && indicator.pattern) {
+            checkedCount++;
             for (const line of text.split("\n")) {
               if (globMatch(indicator.pattern, line.trim(), indicator.case_insensitive)) {
+                console.log(`[classify]   Profile sub-prompt match: ${sp.id} via "${indicator.pattern}"`);
                 return ["prompting", 0.85, `profile sub-prompt ${sp.id}: ${indicator.pattern}`];
               }
             }
@@ -287,6 +336,9 @@ function matchProfileIndicators(
     }
   }
 
+  if (checkedCount > 0) {
+    console.log(`[classify]   Profile indicators: checked ${checkedCount} globs, no match`);
+  }
   return null;
 }
 

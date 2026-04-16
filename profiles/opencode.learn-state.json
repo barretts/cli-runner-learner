@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0",
-  "session_id": "opencode-learn-1776288133259",
+  "session_id": "opencode-learn-1776319000276",
   "tool_id": "opencode",
   "tool_command": "opencode",
-  "started_at": "2026-04-15T21:22:13.259Z",
-  "updated_at": "2026-04-15T21:23:47.517Z",
+  "started_at": "2026-04-16T05:56:40.276Z",
+  "updated_at": "2026-04-16T05:57:14.773Z",
   "status": "COMPLETED",
   "current_round": 3,
   "max_rounds": 8,
@@ -18,34 +18,25 @@
     {
       "round": 0,
       "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-0-1776288142830.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776319008308.jsonl",
       "states_observed": [
-        "startup",
-        "ready",
         "completed"
       ]
     },
     {
       "round": 1,
       "strategy": "enter",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-1-1776288165771.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776319018185.jsonl",
       "states_observed": [
-        "startup",
-        "startup",
-        "ready",
-        "ready",
-        "ready",
         "completed"
       ]
     },
     {
       "round": 2,
-      "strategy": "prompt_response",
-      "input_text": "say hello",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-2-1776288220262.jsonl",
+      "strategy": "observe",
+      "input_text": "script -q -c 'opencode' /tmp/opencode-probe.log",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-2-1776319034255.jsonl",
       "states_observed": [
-        "startup",
-        "ready",
         "completed"
       ]
     }
@@ -60,8 +51,8 @@
         "state_gap:prompting has zero learned patterns"
       ],
       "decision": "RETRY",
-      "patches_applied": 8,
-      "timestamp": "2026-04-15T21:23:40.261Z"
+      "patches_applied": 2,
+      "timestamp": "2026-04-16T05:57:14.254Z"
     }
   ],
   "failure_signatures_seen": [
@@ -72,7 +63,7 @@
   ],
   "config": {
     "settle_timeout_ms": 3000,
-    "max_probe_session_ms": 30000,
+    "max_probe_session_ms": 45000,
     "heal_mode": "auto",
     "max_heal_rounds": 4
   },

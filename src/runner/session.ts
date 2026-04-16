@@ -38,6 +38,13 @@ export class Session {
       Object.assign(env, this.config.env);
     }
 
+    console.log(`[session] Spawning harness: expect ${HARNESS_PATH}`);
+    console.log(`[session]   CLR_COMMAND=${env.CLR_COMMAND}`);
+    console.log(`[session]   CLR_ARGS=${env.CLR_ARGS || '(none)'}`);
+    console.log(`[session]   CLR_SETTLE_MS=${env.CLR_SETTLE_MS}`);
+    console.log(`[session]   CLR_MAX_SESSION_MS=${env.CLR_MAX_SESSION_MS}`);
+    console.log(`[session]   CLR_TRANSCRIPT=${env.CLR_TRANSCRIPT}`);
+
     this.proc = spawn("expect", [HARNESS_PATH], {
       env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -64,7 +71,15 @@ export class Session {
 
     this.rl.on("line", (line: string) => {
       const event = parseFifoEvent(line);
-      if (!event) return;
+      if (!event) {
+        if (line.trim()) console.log(`[session] Unparseable harness line: ${line.trim().substring(0, 120)}`);
+        return;
+      }
+
+      const evtSummary = event.type === "output"
+        ? `output (${event.data?.length ?? 0} hex chars)`
+        : `${event.type}: ${event.value ?? event.data ?? ''}`;
+      console.log(`[session] Event: ${evtSummary}`);
 
       if (this.eventResolvers.length > 0) {
         const resolve = this.eventResolvers.shift()!;
@@ -115,13 +130,19 @@ export class Session {
    * Send a command to the harness via stdin.
    */
   sendCommand(cmd: string): void {
-    if (this._done) return;
+    if (this._done) {
+      console.log(`[session] sendCommand(${cmd}) skipped -- session done`);
+      return;
+    }
+    console.log(`[session] Sending command: ${cmd}`);
     try {
       if (this.proc?.stdin?.writable) {
         this.proc.stdin.write(cmd + "\n");
+      } else {
+        console.log(`[session] stdin not writable, command dropped`);
       }
     } catch {
-      // EPIPE: process already exited -- harmless
+      console.log(`[session] EPIPE on stdin write -- process already exited`);
     }
   }
 
@@ -146,12 +167,18 @@ export class Session {
    * Clean up: kill process.
    */
   async cleanup(): Promise<void> {
+    console.log(`[session] Cleanup: done=${this._done}, proc=${this.proc ? 'alive' : 'null'}`);
     if (this.proc && !this._done) {
+      console.log(`[session] Sending SIGTERM...`);
       this.proc.kill("SIGTERM");
       await new Promise((r) => setTimeout(r, 1000));
-      if (!this._done) this.proc.kill("SIGKILL");
+      if (!this._done) {
+        console.log(`[session] Still alive after 1s, sending SIGKILL`);
+        this.proc.kill("SIGKILL");
+      }
     }
     this.rl?.close();
+    console.log(`[session] Cleanup complete`);
   }
 }
 

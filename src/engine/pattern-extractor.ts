@@ -21,15 +21,22 @@ export function extractPatterns(
     segments: ClassifiedSegment[];
   }>,
 ): LearnedPattern[] {
+  console.log(`[extract] Extracting patterns from ${classifiedRuns.length} runs`);
+
   // Phase 1: collect all fragments with their state associations
   const candidates = new Map<string, PatternCandidate>();
+  let totalFragments = 0;
+  let skippedUnknown = 0;
+  let skippedLowConf = 0;
 
   for (const run of classifiedRuns) {
+    let runFragments = 0;
     for (const seg of run.segments) {
-      if (seg.state === "unknown" || seg.state === "completed") continue;
-      if (seg.confidence < 0.4) continue;
+      if (seg.state === "unknown" || seg.state === "completed") { skippedUnknown++; continue; }
+      if (seg.confidence < 0.4) { skippedLowConf++; continue; }
 
       const fragments = extractFragments(seg.stripped_text);
+      runFragments += fragments.length;
 
       for (const frag of fragments) {
         const key = `${seg.state}::${frag}`;
@@ -59,14 +66,19 @@ export function extractPatterns(
         }
       }
     }
+    totalFragments += runFragments;
+    console.log(`[extract]   Run ${run.transcript_path.split('/').pop()}: ${runFragments} fragments from ${run.segments.length} segments`);
   }
+  console.log(`[extract] Phase 1: ${candidates.size} unique candidates from ${totalFragments} total fragments (skipped: ${skippedUnknown} unknown/completed, ${skippedLowConf} low-conf)`);
 
   // Phase 2: Score candidates
   const totalRuns = classifiedRuns.length;
   const results: LearnedPattern[] = [];
+  let belowThreshold = 0;
+  let tooShort = 0;
 
   for (const candidate of candidates.values()) {
-    if (candidate.pattern.length < 5) continue;
+    if (candidate.pattern.length < 5) { tooShort++; continue; }
 
     // Run coverage: fraction of runs containing this pattern
     const runCoverage = candidate.source_transcripts.size / totalRuns;
@@ -89,15 +101,33 @@ export function extractPatterns(
         occurrences: candidate.occurrences,
         confidence: candidate.confidence,
       });
+    } else {
+      belowThreshold++;
     }
   }
+
+  console.log(`[extract] Phase 2: ${results.length} patterns above threshold, ${belowThreshold} below 0.35, ${tooShort} too short`);
 
   results.sort((a, b) => b.confidence - a.confidence || b.occurrences - a.occurrences);
 
   // Limit to top patterns per state (avoid noise)
   const perState = limitPerState(results, 5);
+  console.log(`[extract] After per-state limit (5): ${perState.length} patterns`);
 
-  return deduplicatePatterns(perState);
+  const final = deduplicatePatterns(perState);
+  console.log(`[extract] After dedup: ${final.length} patterns`);
+
+  // Log per-state breakdown
+  const stateBreakdown: Record<string, number> = {};
+  for (const p of final) {
+    stateBreakdown[p.classified_as] = (stateBreakdown[p.classified_as] ?? 0) + 1;
+  }
+  console.log(`[extract] Per-state: ${Object.entries(stateBreakdown).map(([s, c]) => `${s}:${c}`).join(', ')}`);
+  for (const p of final) {
+    console.log(`[extract]   [${p.classified_as}] "${p.pattern}" conf=${(p.confidence*100).toFixed(0)}% occ=${p.occurrences}`);
+  }
+
+  return final;
 }
 
 /**
