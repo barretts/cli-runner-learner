@@ -12,6 +12,49 @@ const PROJECT_ROOT = resolve(new URL("../../", import.meta.url).pathname);
 const HELP_ARG_VARIANTS = [["--help"], ["-h"], ["help"]];
 
 /**
+ * Known reduce-motion / static-output env vars for specific tools.
+ * These are official flags that produce cleaner output for learning.
+ */
+const KNOWN_REDUCE_MOTION: Record<string, Record<string, string>> = {
+  crush: { CRUSH_REDUCE_ANIMATIONS: "1" },
+  // Add more tools as discovered
+};
+
+/**
+ * Detect reduce-motion env vars for a tool.
+ * Checks the known registry first, then scans help text for hints.
+ */
+export function detectReduceMotionEnv(
+  command: string,
+  helpText?: string,
+): Record<string, string> {
+  const toolName = command.split("/").pop()?.replace(/\.exe$/, "") ?? command;
+  const env: Record<string, string> = {};
+
+  // Check known registry
+  if (KNOWN_REDUCE_MOTION[toolName]) {
+    Object.assign(env, KNOWN_REDUCE_MOTION[toolName]);
+    console.log(`[discovery] reduce-motion: known tool "${toolName}" -> ${JSON.stringify(KNOWN_REDUCE_MOTION[toolName])}`);
+  }
+
+  // Scan help text for reduce-motion hints
+  if (helpText) {
+    const hints = [
+      /(?:--?(?:no-?anima|static|reduce-?motion|simple))/gi,
+      /\b(?:REDUCE_MOTION|NO_ANIMATION|STATIC_UI)\b/g,
+    ];
+    for (const re of hints) {
+      const matches = helpText.match(re);
+      if (matches) {
+        console.log(`[discovery] reduce-motion: help text mentions: ${matches.join(", ")}`);
+      }
+    }
+  }
+
+  return env;
+}
+
+/**
  * Discover a CLI tool's capabilities by running it with help flags.
  * Tries --help, -h, and help in sequence until one produces output.
  * If an LLM client is available, parses the help text into structured data.

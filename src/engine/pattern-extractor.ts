@@ -76,9 +76,17 @@ export function extractPatterns(
   const results: LearnedPattern[] = [];
   let belowThreshold = 0;
   let tooShort = 0;
+  let rejectedEntropy = 0;
+  let rejectedChrome = 0;
 
   for (const candidate of candidates.values()) {
     if (candidate.pattern.length < 5) { tooShort++; continue; }
+
+    // Hard-reject: high-entropy fragments (random animation text)
+    if (looksRandom(candidate.pattern)) { rejectedEntropy++; continue; }
+
+    // Hard-reject: patterns in 3+ states are persistent TUI chrome (status bar, shortcuts)
+    if (candidate.all_states.size >= 3) { rejectedChrome++; continue; }
 
     // Run coverage: fraction of runs containing this pattern
     const runCoverage = candidate.source_transcripts.size / totalRuns;
@@ -86,8 +94,14 @@ export function extractPatterns(
     // Frequency score
     const freqScore = Math.min(candidate.occurrences / totalRuns, 1);
 
-    // Uniqueness: penalize patterns that appear in multiple states
-    const uniqueness = 1 / candidate.all_states.size;
+    // Uniqueness: penalize patterns appearing in multiple states (1/N² instead of 1/N).
+    // Exception: working↔thinking are treated as a single group since TUI tools
+    // re-render the full screen during both states (same chrome, same content).
+    const effectiveStates = new Set(candidate.all_states);
+    if (effectiveStates.has("working") && effectiveStates.has("thinking") && effectiveStates.size === 2) {
+      effectiveStates.delete("thinking"); // collapse to single group
+    }
+    const uniqueness = 1 / (effectiveStates.size * effectiveStates.size);
 
     candidate.confidence = (runCoverage * 0.5 + freqScore * 0.2 + uniqueness * 0.3);
 
@@ -106,7 +120,7 @@ export function extractPatterns(
     }
   }
 
-  console.log(`[extract] Phase 2: ${results.length} patterns above threshold, ${belowThreshold} below 0.35, ${tooShort} too short`);
+  console.log(`[extract] Phase 2: ${results.length} patterns above threshold, ${belowThreshold} below 0.35, ${tooShort} too short, ${rejectedEntropy} random, ${rejectedChrome} chrome`);
 
   results.sort((a, b) => b.confidence - a.confidence || b.occurrences - a.occurrences);
 
@@ -159,6 +173,27 @@ function extractFragments(text: string): string[] {
   }
 
   return [...fragments];
+}
+
+/**
+ * Detect random/scrambled text (e.g. animation frames) by checking character entropy.
+ * Returns true if the fragment looks random rather than meaningful.
+ */
+function looksRandom(text: string): boolean {
+  if (text.length < 6) return false;
+
+  // High ratio of non-alphanumeric characters (excluding common punctuation)
+  const alnumCount = (text.match(/[a-zA-Z0-9 ]/g) || []).length;
+  const alnumRatio = alnumCount / text.length;
+  if (alnumRatio < 0.4) return true;
+
+  // High unique-character ratio relative to length (scrambled text)
+  const uniqueChars = new Set(text).size;
+  const uniqueRatio = uniqueChars / text.length;
+  // Short fragments with almost all unique chars are likely random
+  if (text.length <= 20 && uniqueRatio > 0.85) return true;
+
+  return false;
 }
 
 /**
