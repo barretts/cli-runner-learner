@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cli-runner-learner</title>
+  <meta name="description" content="Learn CLI tool behavior via PTY probing, then export skills and adapter presets for agentic automation." />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="container">
+        <h1 class="logo">cli-runner-<span class="accent">learner</span></h1>
+        <p class="tagline">Autonomous CLI tool learning &amp; skill export</p>
+        <p class="subtitle">PTY probing. Behavioral profiles. Adapter presets. Zero hardcoding.</p>
+        <div class="cta-row">
+          <a href="https://github.com/barretts/cli-runner-learner" class="btn btn-primary">View on GitHub</a>
+          <a href="#install" class="btn btn-secondary">Quick Start</a>
+        </div>
+      </div>
+    </header>
+
+    <section id="features" class="features">
+      <div class="container">
+        <h2>How It Works</h2>
+        <div class="grid">
+          <div class="card">
+            <div class="card-icon">1</div>
+            <h3>Discover</h3>
+            <p>Run the tool with <code>--help</code> and parse its capabilities: subcommands, flags, interactivity, and reduce-motion env vars.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">2</div>
+            <h3>Probe</h3>
+            <p>Launch the tool in a real PTY, apply adaptive probe strategies, and record every byte of terminal I/O as JSONL transcripts.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">3</div>
+            <h3>Learn</h3>
+            <p>Classify output into a 7-state machine (startup, ready, working, thinking, prompting, completed, error) and extract glob patterns.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">4</div>
+            <h3>Export</h3>
+            <p>Generate driving skills (markdown) and adapter presets (TypeScript/JSON) ready to drop into <a href="https://agentthreader.com">AgentThreader</a>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="output-section">
+      <div class="container">
+        <h2>What Gets Generated</h2>
+        <div class="output-grid">
+          <div class="output-item">
+            <code>AdapterPreset</code>
+            <span>TypeScript / JSON</span>
+          </div>
+          <div class="output-item">
+            <code>Skill Markdown</code>
+            <span>Per-tool driving guide</span>
+          </div>
+          <div class="output-item">
+            <code>ToolProfile</code>
+            <span>Behavioral state machine</span>
+          </div>
+          <div class="output-item">
+            <code>Compiled Skills</code>
+            <span>5 IDE targets</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cli-section">
+      <div class="container">
+        <h2>CLI in Action</h2>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <pre><code><span class="prompt">$</span> clr learn --tool crush --command crush --heal auto
+<span class="dim">[discover] Parsing --help output...</span>
+<span class="dim">[discover] Found 12 subcommands, 9 flags</span>
+<span class="dim">[probe:1] Strategy: observe (30s)</span>
+<span class="dim">[probe:1] Classified 6 segments, extracted 14 patterns</span>
+<span class="dim">[probe:2] Strategy: multi_turn (45s)</span>
+<span class="dim">[probe:2] Classified 8 segments, extracted 19 patterns</span>
+<span class="success">[learn] Profile confidence: 81.9% -- converged</span>
+<span class="dim">[learn] Saved: profiles/crush.json</span>
+
+<span class="prompt">$</span> clr export-adapter --tool crush
+<span class="success">[export-adapter] Generated: generated/adapters/crush-preset.ts</span>
+<span class="dim">[export-adapter] Profile confidence: 81.9%</span>
+<span class="dim">[export-adapter] Overrides: applied</span>
+
+<span class="prompt">$</span> clr export-skill --tool crush
+<span class="success">[export-skill] Generated: generated/skills/crush.md</span>
+<span class="dim">[export-skill] States: startup, ready, working, prompting, thinking, completed, error</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="install-section">
+      <div class="container">
+        <h2>Quick Start</h2>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <pre><code><span class="prompt">$</span> npm install -g cli-runner-learner
+<span class="dim">added 3 packages in 4s</span>
+
+<span class="prompt">$</span> clr learn --tool my-tool --command my-tool
+<span class="dim">[learn] Learning my-tool behavior...</span>
+
+<span class="prompt">$</span> clr export-adapter --tool my-tool
+<span class="success">[export-adapter] Generated: generated/adapters/my-tool-preset.ts</span>
+
+<span class="prompt">$</span> clr export-skill --tool my-tool
+<span class="success">[export-skill] Generated: generated/skills/my-tool.md</span></code></pre>
+        </div>
+        <p class="install-note">Requires Node.js &ge; 20. The <code>clr</code> CLI is the main entry point for all commands.</p>
+        <div class="install-links">
+          <a href="https://www.npmjs.com/package/cli-runner-learner" class="text-link">npm package</a>
+          <a href="https://github.com/barretts/cli-runner-learner" class="text-link">Repository</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="ecosystem">
+      <div class="container">
+        <h2>Ecosystem</h2>
+        <p style="text-align:center; color:var(--text-dim); margin-bottom:2rem;">Part of the <a href="https://agenticskillmill.com" style="color:var(--accent);">Agentic Skill Mill</a> family.</p>
+        <div class="grid">
+          <div class="card">
+            <div class="card-icon">&#x2692;</div>
+            <h3><a href="https://agenticskillmill.com">Agentic Skill Mill</a></h3>
+            <p>The parent project &mdash; fragment-composed skills compiled to 7 IDE targets with a companion CLI.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">&#x1F9F5;</div>
+            <h3><a href="https://agentthreader.com">AgentThreader</a></h3>
+            <p>Manifest-driven agentic CLI orchestration with structured contracts, resumable state, and bounded self-healing.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">&#x1F3AC;</div>
+            <h3><a href="https://barretts.github.io/TechDemoDirector">TechDemoDirector</a></h3>
+            <p>Code walk-through presentation scripting with file:line references and speaker notes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <p>MIT License &middot; <a href="https://github.com/barretts/cli-runner-learner">github.com/barretts/cli-runner-learner</a></p>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
