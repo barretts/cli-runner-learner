@@ -10,7 +10,10 @@ export interface PlannedProbe {
   expected_outcome?: string;
 }
 
-const FALLBACK_CYCLE: ProbeStrategy[] = ["observe", "enter", "input", "prompt_response"];
+const FALLBACK_CYCLE: ProbeStrategy[] = [
+  "observe", "enter", "input", "shortcut", "prompt_response",
+  "explore", "multi_turn", "ctrl_c",
+];
 
 /**
  * Plan the next probe round. With an LLM, adapts based on profile state
@@ -99,7 +102,12 @@ function normalizeStrategy(raw: string): ProbeStrategy {
   if (lower === "observe") return "observe";
   if (lower === "enter") return "enter";
   if (lower === "input") return "input";
-  if (lower === "ctrlc" || lower === "promptresponse") return "prompt_response";
+  if (lower === "promptresponse") return "prompt_response";
   if (lower === "custom") return "custom";
+  if (lower === "shortcut") return "shortcut";
+  if (lower === "multiturn") return "multi_turn";
+  if (lower === "permissionflow") return "permission_flow";
+  if (lower === "explore") return "explore";
+  if (lower === "ctrlc") return "ctrl_c";
   return "observe";
 }

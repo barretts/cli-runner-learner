@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "tool_id": "gemini",
   "tool_command": "/Users/bsonntag/.nvm/versions/node/v20.19.6/bin/gemini",
-  "last_updated": "2026-04-16T05:58:40.645Z",
-  "confidence": 0.5118055555555555,
-  "probe_count": 12,
+  "last_updated": "2026-04-16T12:22:17.561Z",
+  "confidence": 0.6253510633737476,
+  "probe_count": 28,
   "needs_review": false,
   "interaction_mode": "interactive",
   "launch": {
@@ -28,6 +28,26 @@
         {
           "type": "output_glob",
           "pattern": "��� Gemini CLI *"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "for authentication..."
+        },
+        {
+          "type": "output_glob",
+          "pattern": "authentication... (Press"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "(Press Esc"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "or Ctrl+C"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Ctrl+C to"
         }
       ],
       "timeout_sec": 30
@@ -42,6 +62,14 @@
         {
           "type": "output_glob",
           "pattern": "*>*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Tips for getting started:"
+        },
+        {
+          "type": "silence_after_output_ms",
+          "value": 5004
         }
       ]
     },
@@ -55,6 +83,14 @@
         {
           "type": "output_glob",
           "pattern": "Shift+Tab to accept edits 1 GEMINI.md file � 1 skill"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(Generating|generating|streaming|Loading|loading|...)*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(Generating|Thinking|Processing|Loading|tokens)*"
         }
       ]
     },
@@ -77,7 +113,7 @@
       "sub_prompts": []
     },
     "thinking": {
-      "description": "User has submitted input and the tool is processing before streaming output begins. May show a spinner, progress indicator, or the word thinking. This is a brief transitional state.",
+      "description": "The brief interval after user input is submitted and echoed but before the first response token appears. Characterized by a loading spinner, ellipsis animation, or blank output with cursor activity. Duration is typically 500ms-3000ms on complex prompts.",
       "indicators": [
         {
           "type": "output_glob",
@@ -86,6 +122,18 @@
         {
           "type": "output_glob",
           "pattern": "*thinking*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(Thinking|Processing|...|⠋|⠌|⠍|⠎|⠏|⠐|⠑|⠒)*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(Thinking|thinking|◐|◓|◑|◒|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏)*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(cursor blinking|spinner|... |⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏)*"
         }
       ]
     },
@@ -211,10 +259,146 @@
       "classified_as": "startup",
       "occurrences": 13,
       "confidence": 0.5874999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
+      "timestamp": "2026-04-16T12:17:08.850Z",
+      "pattern": "for authentication...",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.8274999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
+      "timestamp": "2026-04-16T12:17:08.851Z",
+      "pattern": "authentication... (Press",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.8274999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
+      "timestamp": "2026-04-16T12:17:08.851Z",
+      "pattern": "(Press Esc",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.8274999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
+      "timestamp": "2026-04-16T12:17:08.851Z",
+      "pattern": "or Ctrl+C",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.8274999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
+      "timestamp": "2026-04-16T12:17:08.851Z",
+      "pattern": "Ctrl+C to",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.8274999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
+      "timestamp": "2026-04-16T12:20:32.503Z",
+      "pattern": "Tips for getting started:",
+      "classified_as": "ready",
+      "occurrences": 34,
+      "confidence": 0.4611473933333332
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-4-1776341936998.jsonl",
+      "timestamp": "2026-04-16T12:21:44.128Z",
+      "pattern": "square root",
+      "classified_as": "working",
+      "occurrences": 10,
+      "confidence": 0.3636207080392074
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-4-1776341936998.jsonl",
+      "timestamp": "2026-04-16T12:21:44.128Z",
+      "pattern": "root of",
+      "classified_as": "working",
+      "occurrences": 10,
+      "confidence": 0.3636207080392074
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-4-1776341936998.jsonl",
+      "timestamp": "2026-04-16T12:21:24.717Z",
+      "pattern": "is irrational",
+      "classified_as": "working",
+      "occurrences": 9,
+      "confidence": 0.36945815434172485
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-4-1776341936998.jsonl",
+      "timestamp": "2026-04-16T12:20:55.780Z",
+      "pattern": "irrational using",
+      "classified_as": "working",
+      "occurrences": 7,
+      "confidence": 0.38378430242424233
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-4-1776341936998.jsonl",
+      "timestamp": "2026-04-16T12:20:55.780Z",
+      "pattern": "three different",
+      "classified_as": "working",
+      "occurrences": 7,
+      "confidence": 0.38378430242424233
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-6-1776341973909.jsonl",
+      "timestamp": "2026-04-16T12:22:17.556Z",
+      "pattern": "what can you do?",
+      "classified_as": "prompting",
+      "occurrences": 10,
+      "confidence": 0.3694528265964451
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-7-1776341994412.jsonl",
+      "timestamp": "2026-04-16T12:21:44.128Z",
+      "pattern": "What is 2+2?",
+      "classified_as": "prompting",
+      "occurrences": 7,
+      "confidence": 0.36068889495920736
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-8-1776342012343.jsonl",
+      "timestamp": "2026-04-16T12:21:44.128Z",
+      "pattern": "What is the capital of France?",
+      "classified_as": "prompting",
+      "occurrences": 6,
+      "confidence": 0.3595450852369852
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-9-1776342031564.jsonl",
+      "timestamp": "2026-04-16T12:22:17.556Z",
+      "pattern": "Show your full",
+      "classified_as": "working",
+      "occurrences": 10,
+      "confidence": 0.399643205128205
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-10-1776342054834.jsonl",
+      "timestamp": "2026-04-16T12:22:17.556Z",
+      "pattern": "what is the",
+      "classified_as": "working",
+      "occurrences": 6,
+      "confidence": 0.3948499999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-9-1776342031564.jsonl",
+      "timestamp": "2026-04-16T12:22:17.556Z",
+      "pattern": "before giving",
+      "classified_as": "working",
+      "occurrences": 2,
+      "confidence": 0.38749999999999996
     }
   ],
   "metadata": {
-    "terminal_cols": 85,
-    "terminal_rows": 30
+    "terminal_cols": 120,
+    "terminal_rows": 51
   }
 }

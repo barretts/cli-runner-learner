@@ -159,7 +159,7 @@ export function mergeLearnedPatterns(
       // Update existing pattern: average confidence, increment occurrences
       const oldConf = existing.confidence;
       existing.occurrences += pattern.occurrences;
-      existing.confidence = (existing.confidence + pattern.confidence) / 2;
+      existing.confidence = existing.confidence * 0.7 + pattern.confidence * 0.3;
       existing.timestamp = pattern.timestamp;
       mergedCount++;
       console.log(`[profile]   Merged: [${pattern.classified_as}] "${pattern.pattern}" conf ${(oldConf*100).toFixed(0)}% -> ${(existing.confidence*100).toFixed(0)}%, occ=${existing.occurrences}`);
@@ -337,8 +337,13 @@ function computeProfileConfidence(profile: ToolProfile): number {
       // Give partial credit -- the state is known but not text-anchored.
       totalScore += 0.6;
       console.log(`[profile]   ${stateName}: structural (silence) -> 0.60, indicators=${state.indicators.length}`);
+    } else if (state.indicators.length > 0) {
+      // Heuristic-only: state is identified by classifier heuristics (promoted to
+      // indicators) but has no learned text patterns yet. Give partial credit.
+      totalScore += 0.5;
+      console.log(`[profile]   ${stateName}: heuristic indicators only -> 0.50, indicators=${state.indicators.length}`);
     } else {
-      console.log(`[profile]   ${stateName}: NO patterns, NO structural -> 0.00, indicators=${state.indicators.length}`);
+      console.log(`[profile]   ${stateName}: NO patterns, NO indicators -> 0.00`);
     }
   }
 
