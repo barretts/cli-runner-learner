@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "tool_id": "gemini",
+  "tool_command": "/Users/bsonntag/.nvm/versions/node/v20.19.6/bin/gemini",
+  "last_updated": "2026-04-15T21:19:24.883Z",
+  "confidence": 0.5118055555555555,
+  "probe_count": 9,
+  "needs_review": false,
+  "interaction_mode": "interactive",
+  "launch": {
+    "default_args": [],
+    "env": {},
+    "needs_pty": true,
+    "startup_timeout_sec": 30
+  },
+  "states": {
+    "startup": {
+      "description": "Tool is initializing",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*Authenticated*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*Gemini CLI v*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "��� Gemini CLI *"
+        }
+      ],
+      "timeout_sec": 30
+    },
+    "ready": {
+      "description": "Tool has completed startup/auth and is displaying an input prompt, waiting for user input. Look for a prompt character or cursor indicator after the version/auth banner.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*❯*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*>*"
+        }
+      ]
+    },
+    "working": {
+      "description": "Tool is actively processing",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "> hello"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Shift+Tab to accept edits 1 GEMINI.md file � 1 skill"
+        }
+      ]
+    },
+    "prompting": {
+      "description": "Tool wants user input",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "��� Gemini CLI *"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "��� Gemini CLI"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "��� Authenticated with gemini-api-key *"
+        }
+      ],
+      "sub_prompts": []
+    },
+    "thinking": {
+      "description": "User has submitted input and the tool is processing before streaming output begins. May show a spinner, progress indicator, or the word thinking. This is a brief transitional state.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*Thinking*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*thinking*"
+        }
+      ]
+    },
+    "completed": {
+      "description": "Tool finished",
+      "indicators": [
+        {
+          "type": "process_exit"
+        }
+      ]
+    },
+    "error": {
+      "description": "Tool errored",
+      "indicators": [
+        {
+          "type": "exit_code_nonzero"
+        }
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "from": "startup",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "startup",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "ready",
+      "to": "working",
+      "on": "input_sent"
+    },
+    {
+      "from": "working",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "working",
+      "to": "thinking",
+      "on": "thinking_indicator"
+    },
+    {
+      "from": "thinking",
+      "to": "working",
+      "on": "output_resumed"
+    },
+    {
+      "from": "working",
+      "to": "completed",
+      "on": "completion_indicator"
+    },
+    {
+      "from": "working",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "*",
+      "to": "error",
+      "on": "error_indicator"
+    },
+    {
+      "from": "*",
+      "to": "completed",
+      "on": "process_exit"
+    }
+  ],
+  "timing": {
+    "typical_startup_sec": 5,
+    "idle_threshold_sec": 8,
+    "max_session_sec": 300
+  },
+  "learned_patterns": [
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-0-1776282518358.jsonl",
+      "timestamp": "2026-04-15T21:19:24.871Z",
+      "pattern": "��� Gemini CLI *",
+      "classified_as": "prompting",
+      "occurrences": 23,
+      "confidence": 0.6354166666666667
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-0-1776282518358.jsonl",
+      "timestamp": "2026-04-15T19:50:15.864Z",
+      "pattern": "��� Gemini CLI",
+      "classified_as": "prompting",
+      "occurrences": 9,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-0-1776282518358.jsonl",
+      "timestamp": "2026-04-15T19:50:15.864Z",
+      "pattern": "��� Authenticated with gemini-api-key *",
+      "classified_as": "prompting",
+      "occurrences": 9,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-2-1776282577751.jsonl",
+      "timestamp": "2026-04-15T19:49:57.738Z",
+      "pattern": "> hello",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-2-1776282577751.jsonl",
+      "timestamp": "2026-04-15T19:50:15.864Z",
+      "pattern": "Shift+Tab to accept edits 1 GEMINI.md file � 1 skill",
+      "classified_as": "working",
+      "occurrences": 5,
+      "confidence": 0.5
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-2-1776287885581.jsonl",
+      "timestamp": "2026-04-15T21:19:24.872Z",
+      "pattern": "��� Gemini CLI *",
+      "classified_as": "startup",
+      "occurrences": 13,
+      "confidence": 0.5874999999999999
+    }
+  ],
+  "metadata": {
+    "terminal_cols": 80,
+    "terminal_rows": 24
+  }
+}

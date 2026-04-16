@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "tool_id": "claude",
   "tool_command": "/Users/bsonntag/.local/bin/claude",
-  "last_updated": "2026-04-15T18:42:22.465Z",
-  "confidence": 0.52,
-  "probe_count": 3,
+  "last_updated": "2026-04-15T21:57:19.876Z",
+  "confidence": 0.5483315295815295,
+  "probe_count": 14,
   "needs_review": false,
   "launch": {
     "default_args": [],
@@ -35,29 +35,160 @@
         {
           "type": "output_glob",
           "pattern": "startedWelcome back!Run*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "�������Recent activity���������No"
         }
       ],
       "timeout_sec": 30
     },
     "ready": {
-      "description": "Tool is waiting for input",
-      "indicators": []
+      "description": "Idle state where the input prompt is visible and the tool is waiting for user input. Shows model name, API usage indicator, shortcut hints, and an empty input area.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*> *"
+        },
+        {
+          "type": "silence_after_output_ms",
+          "value": 5000
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*? for shortcuts*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*Opus*API*Usage*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "o what"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "what files"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "files are"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "are in"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "in the"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "activity���������No recent"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "recent activity"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "activity ��"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "�� Opus"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Opus 4.6"
+        }
+      ]
     },
     "working": {
-      "description": "Tool is actively processing",
-      "indicators": []
+      "description": "CLI is executing a tool call (file read, grep, bash, edit). Output streams with tool name headers and result blocks.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*Read(*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*Bash(*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "o what"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "what is"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "is 2+2"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "2+2 =Cultivating&"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "=Cultivating& o�esc"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "o�esc to"
+        }
+      ]
     },
     "prompting": {
-      "description": "Tool wants user input",
-      "indicators": [],
+      "description": "Tool displays a permission gate asking the user to allow or deny a tool call (file write, bash command, etc). Look for Allow/Deny buttons, Y/N prompts, or permission request text.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*Allow*Deny*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*Allow*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*Deny*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*allow once*"
+        }
+      ],
       "sub_prompts": []
     },
     "thinking": {
-      "description": "Tool is processing/reasoning",
+      "description": "CLI is generating a response. A spinner or progress indicator is active. No tool output streaming yet.",
       "indicators": [
         {
           "type": "output_glob",
           "pattern": "o hello =Pouncing& o�esc to interrupt"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "o read"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "read the"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "the file"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "file package.json"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "package.json \"Elucidating&"
         }
       ]
     },
@@ -138,42 +269,42 @@
   "learned_patterns": [
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
-      "timestamp": "2026-04-15T18:42:22.464Z",
+      "timestamp": "2026-04-15T21:57:19.863Z",
       "pattern": "Claude Code*nTips",
       "classified_as": "startup",
-      "occurrences": 6,
-      "confidence": 1
+      "occurrences": 29,
+      "confidence": 0.6541666666666667
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
-      "timestamp": "2026-04-15T18:42:22.465Z",
+      "timestamp": "2026-04-15T21:57:19.863Z",
       "pattern": "Code*nTips for",
       "classified_as": "startup",
-      "occurrences": 6,
-      "confidence": 1
+      "occurrences": 29,
+      "confidence": 0.6541666666666667
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
-      "timestamp": "2026-04-15T18:42:22.465Z",
+      "timestamp": "2026-04-15T21:57:19.863Z",
       "pattern": "for getting",
       "classified_as": "startup",
-      "occurrences": 6,
-      "confidence": 1
+      "occurrences": 29,
+      "confidence": 0.6541666666666667
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
-      "timestamp": "2026-04-15T18:42:22.465Z",
+      "timestamp": "2026-04-15T21:57:19.863Z",
       "pattern": "getting startedWelcome",
       "classified_as": "startup",
-      "occurrences": 6,
-      "confidence": 1
+      "occurrences": 29,
+      "confidence": 0.6541666666666667
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776278503941.jsonl",
-      "timestamp": "2026-04-15T18:42:22.465Z",
+      "timestamp": "2026-04-15T21:10:15.077Z",
       "pattern": "startedWelcome back!Run*",
       "classified_as": "startup",
-      "occurrences": 6,
+      "occurrences": 16,
       "confidence": 1
     },
     {
@@ -183,10 +314,267 @@
       "classified_as": "thinking",
       "occurrences": 1,
       "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776285417934.jsonl",
+      "timestamp": "2026-04-15T21:57:19.863Z",
+      "pattern": "�������Recent activity���������No",
+      "classified_as": "startup",
+      "occurrences": 13,
+      "confidence": 0.6541666666666667
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776285579897.jsonl",
+      "timestamp": "2026-04-15T20:39:57.191Z",
+      "pattern": "o read",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776285579897.jsonl",
+      "timestamp": "2026-04-15T20:39:57.191Z",
+      "pattern": "read the",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776285579897.jsonl",
+      "timestamp": "2026-04-15T20:39:57.191Z",
+      "pattern": "the file",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776285579897.jsonl",
+      "timestamp": "2026-04-15T20:39:57.191Z",
+      "pattern": "file package.json",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776285579897.jsonl",
+      "timestamp": "2026-04-15T20:39:57.191Z",
+      "pattern": "package.json \"Elucidating&",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776287247379.jsonl",
+      "timestamp": "2026-04-15T21:10:15.077Z",
+      "pattern": "o what",
+      "classified_as": "working",
+      "occurrences": 3,
+      "confidence": 0.5333333333333332
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776287247379.jsonl",
+      "timestamp": "2026-04-15T21:10:15.077Z",
+      "pattern": "what is",
+      "classified_as": "working",
+      "occurrences": 3,
+      "confidence": 0.5333333333333332
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776287247379.jsonl",
+      "timestamp": "2026-04-15T21:10:15.077Z",
+      "pattern": "is 2+2",
+      "classified_as": "working",
+      "occurrences": 3,
+      "confidence": 0.5333333333333332
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776287247379.jsonl",
+      "timestamp": "2026-04-15T21:10:15.077Z",
+      "pattern": "2+2 =Cultivating&",
+      "classified_as": "working",
+      "occurrences": 3,
+      "confidence": 0.5333333333333332
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776287247379.jsonl",
+      "timestamp": "2026-04-15T21:08:10.042Z",
+      "pattern": "=Cultivating& o�esc",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.6499999999999999
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776287247379.jsonl",
+      "timestamp": "2026-04-15T21:10:15.077Z",
+      "pattern": "o�esc to",
+      "classified_as": "working",
+      "occurrences": 4,
+      "confidence": 0.5583333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776287308856.jsonl",
+      "timestamp": "2026-04-15T21:08:59.287Z",
+      "pattern": "o create",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.3833333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776287308856.jsonl",
+      "timestamp": "2026-04-15T21:08:59.287Z",
+      "pattern": "create a",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.3833333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776287308856.jsonl",
+      "timestamp": "2026-04-15T21:08:59.287Z",
+      "pattern": "a file",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.3833333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776287308856.jsonl",
+      "timestamp": "2026-04-15T21:08:59.287Z",
+      "pattern": "file called",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.3833333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776287308856.jsonl",
+      "timestamp": "2026-04-15T21:08:59.287Z",
+      "pattern": "called *",
+      "classified_as": "thinking",
+      "occurrences": 1,
+      "confidence": 0.3833333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:56:32.925Z",
+      "pattern": "o what",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:56:32.925Z",
+      "pattern": "what files",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:56:32.925Z",
+      "pattern": "files are",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:56:32.925Z",
+      "pattern": "are in",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:56:32.925Z",
+      "pattern": "in the",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.5333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:57:19.863Z",
+      "pattern": "activity���������No recent",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.55
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:57:19.863Z",
+      "pattern": "recent activity",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.55
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:57:19.863Z",
+      "pattern": "activity ��",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.55
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:57:19.863Z",
+      "pattern": "�� Opus",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.55
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "timestamp": "2026-04-15T21:57:19.863Z",
+      "pattern": "Opus 4.6",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.55
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-3-1776290234407.jsonl",
+      "timestamp": "2026-04-15T21:57:19.865Z",
+      "pattern": "� high",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.475
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-3-1776290234407.jsonl",
+      "timestamp": "2026-04-15T21:57:19.865Z",
+      "pattern": "� *",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.475
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-3-1776290234407.jsonl",
+      "timestamp": "2026-04-15T21:57:19.865Z",
+      "pattern": "* a",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.475
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-3-1776290234407.jsonl",
+      "timestamp": "2026-04-15T21:57:19.865Z",
+      "pattern": "new file",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.475
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-3-1776290234407.jsonl",
+      "timestamp": "2026-04-15T21:57:19.865Z",
+      "pattern": "file called",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.475
     }
   ],
   "metadata": {
-    "terminal_cols": 80,
-    "terminal_rows": 24
-  }
+    "terminal_cols": 104,
+    "terminal_rows": 71
+  },
+  "interaction_mode": "interactive"
 }

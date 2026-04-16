@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0",
+  "session_id": "claude-learn-1776290044172",
+  "tool_id": "claude",
+  "tool_command": "claude",
+  "started_at": "2026-04-15T21:54:04.172Z",
+  "updated_at": "2026-04-15T21:57:19.875Z",
+  "status": "COMPLETED",
+  "current_round": 4,
+  "max_rounds": 8,
+  "confidence_threshold": 0.8,
+  "confidence_history": [
+    0.6031565656565656,
+    0.6031565656565656,
+    0.5708152958152957,
+    0.5483315295815295
+  ],
+  "completed_probes": [
+    {
+      "round": 0,
+      "strategy": "observe",
+      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776290062360.jsonl",
+      "states_observed": [
+        "startup",
+        "ready",
+        "completed"
+      ]
+    },
+    {
+      "round": 1,
+      "strategy": "enter",
+      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776290106580.jsonl",
+      "states_observed": [
+        "startup",
+        "ready",
+        "completed"
+      ]
+    },
+    {
+      "round": 2,
+      "strategy": "input",
+      "input_text": "what files are in the current directory?",
+      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776290159071.jsonl",
+      "states_observed": [
+        "ready",
+        "ready",
+        "ready",
+        "ready",
+        "completed"
+      ]
+    },
+    {
+      "round": 3,
+      "strategy": "input",
+      "input_text": "create a new file called /tmp/cli-learner-probe.txt with the text 'hello'",
+      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-3-1776290234407.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    }
+  ],
+  "healing_rounds": [
+    {
+      "round": 1,
+      "failure_signatures": [
+        "state_gap:ready has zero learned patterns",
+        "state_gap:prompting has zero learned patterns"
+      ],
+      "decision": "RETRY",
+      "patches_applied": 7,
+      "timestamp": "2026-04-15T21:55:59.069Z"
+    },
+    {
+      "round": 2,
+      "failure_signatures": [
+        "state_gap:prompting has zero learned patterns"
+      ],
+      "decision": "RETRY",
+      "patches_applied": 8,
+      "timestamp": "2026-04-15T21:57:14.405Z"
+    }
+  ],
+  "failure_signatures_seen": [
+    "state_gap:ready has zero learned patterns",
+    "state_gap:prompting has zero learned patterns"
+  ],
+  "config": {
+    "settle_timeout_ms": 1500,
+    "max_probe_session_ms": 45000,
+    "heal_mode": "auto",
+    "max_heal_rounds": 4
+  },
+  "abort_reason": "Non-convergent: same failure signatures after healing"
+}

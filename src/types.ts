@@ -31,6 +31,12 @@ export interface ClassifiedSegment extends TranscriptSegment {
   state: ToolState;
   confidence: number;  // 0.0-1.0
   reason: string;      // why this classification was chosen
+  detectedSubPrompt?: {
+    prompt_text: string;
+    prompt_type: "yes_no" | "selection" | "text_input" | "confirmation" | "unknown";
+    suggested_response: string;
+    confidence: number;
+  };
 }
 
 // ---- Tool Profile ----
@@ -94,11 +100,23 @@ export interface ToolProfile {
 
   learned_patterns: LearnedPattern[];
 
+  discovery?: ToolDiscovery;
+  llm_classifications?: number;
+
   metadata?: {
     tool_version?: string;
     terminal_cols?: number;
     terminal_rows?: number;
   };
+}
+
+export interface ToolDiscovery {
+  help_text: string;
+  parsed_description: string;
+  subcommands: Array<{ name: string; description: string; flags: string[] }>;
+  common_flags: string[];
+  interactive: boolean;
+  discovered_at: string;
 }
 
 export interface LearnedPattern {
@@ -136,13 +154,24 @@ export interface FifoEvent {
 
 // ---- Learning ----
 
-export type ProbeStrategy = "observe" | "enter" | "input" | "prompt_response";
+export type ProbeStrategy = "observe" | "enter" | "input" | "prompt_response" | "custom";
 
 export interface ProbeRound {
   round: number;
   strategy: ProbeStrategy;
-  input_text?: string;        // for "input" strategy
+  input_text?: string;        // for "input" or "custom" strategy
   transcript_path: string;
+  rationale?: string;
+  expected_outcome?: string;
+}
+
+export interface ProbeResult {
+  round: number;
+  strategy: ProbeStrategy;
+  input_text?: string;
+  transcript_path: string;
+  classified_segments: ClassifiedSegment[];
+  rationale?: string;
 }
 
 export interface LearnOpts {
@@ -152,12 +181,35 @@ export interface LearnOpts {
   max_probe_session_ms: number;
 }
 
+// ---- State Verification ----
+
+export interface StateSnapshot {
+  commit_hash: string | null;
+  timestamp: string;
+  tracked_files: number;
+  untracked_files: string[];
+  modified_files: string[];
+  is_clean: boolean;
+}
+
+export interface StateDiff {
+  before: StateSnapshot;
+  after: StateSnapshot;
+  new_files: string[];
+  modified_files: string[];
+  deleted_files: string[];
+  diff_summary: string;
+  raw_diff: string;
+}
+
 // ---- Driver ----
 
 export interface DriveOpts {
   input: string;
   max_session_ms: number;
   settle_timeout_ms: number;
+  workDir?: string;  // directory to track for side effects via git
+  llmClient?: import("./llm/client.js").LLMClient | null;
 }
 
 export interface DriveResult {
@@ -166,4 +218,76 @@ export interface DriveResult {
   transcript_path: string;
   output: string;
   duration_ms: number;
+  state_diff?: StateDiff;
+}
+
+// ---- Healing (agentic-skill-mill) ----
+
+export type LearnFailureClass =
+  | "probe_no_output"
+  | "classification_ambiguous"
+  | "state_gap"
+  | "pattern_noise"
+  | "probe_timeout"
+  | "tool_crash"
+  | "convergence_plateau";
+
+export interface LearnHealPatch {
+  target: "probe_strategy" | "classification_hint" | "profile_state" | "timing_knob";
+  operation: "append" | "replace";
+  content: string;
+}
+
+export interface LearnHealDecision {
+  decision: "RETRY" | "STOP" | "ACCEPT_PARTIAL";
+  failure_class: LearnFailureClass;
+  root_cause: string;
+  patches: LearnHealPatch[];
+  learned_rule?: string;
+  suggested_probes?: Array<{
+    strategy: ProbeStrategy;
+    input_text?: string;
+    rationale: string;
+  }>;
+}
+
+export interface LearnSessionState {
+  schema_version: "1.0";
+  session_id: string;
+  tool_id: string;
+  tool_command: string;
+  started_at: string;
+  updated_at: string;
+  status: "RUNNING" | "COMPLETED" | "ABORTED";
+  abort_reason?: string;
+
+  current_round: number;
+  max_rounds: number;
+  confidence_threshold: number;
+  confidence_history: number[];
+
+  completed_probes: Array<{
+    round: number;
+    strategy: ProbeStrategy;
+    input_text?: string;
+    transcript_path: string;
+    states_observed: ToolState[];
+  }>;
+
+  healing_rounds: Array<{
+    round: number;
+    failure_signatures: string[];
+    decision: string;
+    patches_applied: number;
+    timestamp: string;
+  }>;
+
+  failure_signatures_seen: string[];
+
+  config: {
+    settle_timeout_ms: number;
+    max_probe_session_ms: number;
+    heal_mode: string;
+    max_heal_rounds: number;
+  };
 }
