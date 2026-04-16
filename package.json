@@ -1,16 +1,38 @@
 {
   "name": "cli-runner-learner",
-  "version": "0.1.0",
-  "description": "Forced learning cycle for interactive CLI tool automation",
+  "version": "0.2.0",
+  "description": "Learn CLI tool behavior via PTY probing, then export skills and adapter presets for agentic automation",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "compile": "node skill/build/compile.mjs",
+    "compile:validate": "node skill/build/compile.mjs --validate",
+    "compile:watch": "node skill/build/compile.mjs --watch",
+    "setup": "bash install-local.sh",
+    "setup:skills": "bash install-local.sh --skills-only",
+    "uninstall-skills": "bash install-local.sh --uninstall"
   },
   "bin": {
     "clr": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "compiled",
+    "skill",
+    "profiles",
+    "README.md",
+    "install-local.sh"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
