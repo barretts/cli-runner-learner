@@ -1,0 +1,24 @@
+{
+  "name": "cli-runner-learner",
+  "version": "0.1.0",
+  "description": "Forced learning cycle for interactive CLI tool automation",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "cli": "node dist/cli.js"
+  },
+  "bin": {
+    "clr": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.13.0"
+  }
+}

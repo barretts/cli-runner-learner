@@ -1,0 +1,250 @@
+{
+  "schema_version": "1.0",
+  "tool_id": "claude",
+  "tool_command": "/Users/bsonntag/.local/bin/claude",
+  "last_updated": "2026-04-15T18:04:56.813Z",
+  "confidence": 0.43749999999999994,
+  "probe_count": 3,
+  "needs_review": true,
+  "launch": {
+    "default_args": [],
+    "env": {},
+    "needs_pty": true,
+    "startup_timeout_sec": 30
+  },
+  "states": {
+    "startup": {
+      "description": "Tool is initializing",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "[>1u[>4;2mmClaude Code*nTips for getting startedWelcome back!Run* �������Recent activity���������No recent activity  �� ��  Opus 4.6 � API Usage Billing* high � * ? for shortcuts[>0q"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "back!Run* �������Recent activity���������No recent activity ��"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "�������Recent activity���������No recent activity �� ��"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "activity���������No recent activity �� �� Opus"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "recent activity �� �� Opus 4.6"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "activity �� �� Opus 4.6 �"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "�� �� Opus 4.6 � API"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "�� Opus 4.6 � API Usage"
+        }
+      ],
+      "timeout_sec": 30
+    },
+    "ready": {
+      "description": "Tool is waiting for input",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "[<u[>1u[>4;2m"
+        }
+      ]
+    },
+    "working": {
+      "description": "Tool is actively processing",
+      "indicators": []
+    },
+    "prompting": {
+      "description": "Tool wants user input",
+      "indicators": [],
+      "sub_prompts": []
+    },
+    "completed": {
+      "description": "Tool finished",
+      "indicators": [
+        {
+          "type": "process_exit"
+        }
+      ]
+    },
+    "error": {
+      "description": "Tool errored",
+      "indicators": [
+        {
+          "type": "exit_code_nonzero"
+        }
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "from": "startup",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "startup",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "ready",
+      "to": "working",
+      "on": "input_sent"
+    },
+    {
+      "from": "working",
+      "to": "prompting",
+      "on": "prompt_indicator"
+    },
+    {
+      "from": "working",
+      "to": "completed",
+      "on": "completion_indicator"
+    },
+    {
+      "from": "working",
+      "to": "ready",
+      "on": "ready_indicator"
+    },
+    {
+      "from": "*",
+      "to": "error",
+      "on": "error_indicator"
+    },
+    {
+      "from": "*",
+      "to": "completed",
+      "on": "process_exit"
+    }
+  ],
+  "timing": {
+    "typical_startup_sec": 5,
+    "idle_threshold_sec": 8,
+    "max_session_sec": 300
+  },
+  "learned_patterns": [
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "[>1u[>4;2mmClaude Code*nTips for getting startedWelcome back!Run* �������Recent activity���������No recent activity  �� ��  Opus 4.6 � API Usage Billing* high � * ? for shortcuts[>0q",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "back!Run* �������Recent activity���������No recent activity ��",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "�������Recent activity���������No recent activity �� ��",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "activity���������No recent activity �� �� Opus",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "recent activity �� �� Opus 4.6",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "activity �� �� Opus 4.6 �",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "�� �� Opus 4.6 � API",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-0-1776276258386.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "�� Opus 4.6 � API Usage",
+      "classified_as": "startup",
+      "occurrences": 6,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-1-1776276265529.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "[<u[>1u[>4;2m",
+      "classified_as": "ready",
+      "occurrences": 2,
+      "confidence": 0.41666666666666663
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776276277692.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "[<u[>1u[>4;2mo hello                                                                         =Slithering& o�esc to interruptSl;iSt6lhie3trhi\"enrg�i&ng&\"36;=;Sl6iSt3lhie\"trhi�enrgi&ng&\"(thinking)(thinking)3(thinking)6(thinking)(thinking);(thinking)(thinking)=(thinking)(thinking)(thinking)(thinking)(thinking);(thinking)(thinking)6(thinking)&(thinking)�Hey.Whatareweworkingon?3(thinking)(thinking)(thinking)Slithering&                       o�? for shortcuts",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.3333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776276277692.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "[<u[>1u[>4;2mo hello =Slithering& o�esc to interruptSl;iSt6lhie3trhi\"enrg�i&ng&\"36;=;Sl6iSt3lhie\"trhi�enrgi&ng&\"(thinking)(thinking)3(thinking)6(thinking)(thinking);(thinking)(thinking)=(thinking)(thinking)(thinking)(thinking)(thinking);(thinking)(thinking)6(thinking)&(thinking)�Hey.Whatareweworkingon?3(thinking)(thinking)(thinking)Slithering&",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.3333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776276277692.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "hello =Slithering& o�esc to interruptSl;iSt6lhie3trhi\"enrg�i&ng&\"36;=;Sl6iSt3lhie\"trhi�enrgi&ng&\"(thinking)(thinking)3(thinking)6(thinking)(thinking);(thinking)(thinking)=(thinking)(thinking)(thinking)(thinking)(thinking);(thinking)(thinking)6(thinking)&(thinking)�Hey.Whatareweworkingon?3(thinking)(thinking)(thinking)Slithering& o�?",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.3333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776276277692.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "=Slithering& o�esc to interruptSl;iSt6lhie3trhi\"enrg�i&ng&\"36;=;Sl6iSt3lhie\"trhi�enrgi&ng&\"(thinking)(thinking)3(thinking)6(thinking)(thinking);(thinking)(thinking)=(thinking)(thinking)(thinking)(thinking)(thinking);(thinking)(thinking)6(thinking)&(thinking)�Hey.Whatareweworkingon?3(thinking)(thinking)(thinking)Slithering& o�? for",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.3333333333333333
+    },
+    {
+      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/claude-probe-2-1776276277692.jsonl",
+      "timestamp": "2026-04-15T18:04:56.813Z",
+      "pattern": "o�esc to interruptSl;iSt6lhie3trhi\"enrg�i&ng&\"36;=;Sl6iSt3lhie\"trhi�enrgi&ng&\"(thinking)(thinking)3(thinking)6(thinking)(thinking);(thinking)(thinking)=(thinking)(thinking)(thinking)(thinking)(thinking);(thinking)(thinking)6(thinking)&(thinking)�Hey.Whatareweworkingon?3(thinking)(thinking)(thinking)Slithering& o�? for shortcuts",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 0.3333333333333333
+    }
+  ]
+}
