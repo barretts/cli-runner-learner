@@ -32,8 +32,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Build
         run: npm run build
+
+      - name: Test
+        run: npm test --if-present
 
       - name: Compile skills
         run: npm run compile
