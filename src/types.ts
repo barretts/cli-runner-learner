@@ -100,6 +100,10 @@ export interface ToolProfile {
 
   learned_patterns: LearnedPattern[];
 
+  /** Tool-specific env vars that reduce animations/noise during learning.
+   *  e.g. { "CRUSH_REDUCE_ANIMATIONS": "1" } */
+  reduce_motion_env?: Record<string, string>;
+
   discovery?: ToolDiscovery;
   llm_classifications?: number;
 
@@ -154,7 +158,9 @@ export interface FifoEvent {
 
 // ---- Learning ----
 
-export type ProbeStrategy = "observe" | "enter" | "input" | "prompt_response" | "custom";
+export type ProbeStrategy =
+  | "observe" | "enter" | "input" | "prompt_response" | "custom"
+  | "shortcut" | "multi_turn" | "permission_flow" | "explore" | "ctrl_c";
 
 export interface ProbeRound {
   round: number;

@@ -105,17 +105,22 @@ export function buildProbeStrategyPrompt(
 
 Your goal is to choose the next probe action that will teach us the most about this tool's behavior. Focus on states with low confidence or no patterns.
 
-Available standard strategies:
+Available strategies:
 - "observe": Launch tool, wait for it to settle, exit. Good for learning startup behavior.
 - "enter": Launch, wait, send Enter key. Tests what happens on empty input.
-- "input": Launch, wait, send specific text. Tests input handling.
-- "ctrl-c": Launch, wait, send Ctrl-C. Tests interrupt/exit behavior.
-- "custom": Send any specific text. Use for targeted probing.
+- "input": Launch, wait, send specific text (set input_text). Tests input handling.
+- "shortcut": Launch, wait, send keyboard shortcuts (Tab, Shift-Tab, Esc, arrows). Learns TUI navigation and autocomplete.
+- "ctrl_c": Launch, wait, send Ctrl-C. Tests interrupt/cancel/exit behavior.
+- "explore": Launch, wait, send discovery commands (/help, ?, help, /quit). Learns tool-specific help and exit patterns.
+- "multi_turn": Launch, send input, wait for response, send follow-up (set input_text for first message). Learns conversation flow and working→ready transitions.
+- "permission_flow": Launch, send a command that triggers side-effects, wait for permission prompt, auto-accept. Learns permission/confirmation prompt patterns.
+- "prompt_response": Send a side-effect command that triggers a permission prompt, respond affirmatively. Captures the prompting state.
+- "custom": Send any specific text (set input_text). Use for targeted probing.
 
 Respond with ONLY a JSON object (no markdown fences):
 {
   "strategy": "<strategy_name>",
-  "input_text": "<text to send, only for input/custom strategies>",
+  "input_text": "<text to send, for input/custom/multi_turn/explore strategies>",
   "rationale": "<why this probe will be informative>",
   "expected_outcome": "<what we expect to learn>"
 }`,

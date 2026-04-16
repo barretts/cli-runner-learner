@@ -25,18 +25,28 @@ export function hasVisibleContent(line: string): boolean {
  *
  * Handles:
  * - Incomplete CSI fragments like [>1u, [<u, [>4;2m, [>0q
- * - Kitty keyboard protocol sequences
+ * - Kitty keyboard protocol sequences ([=0;1u, [?2026$p, [?1004$p)
+ * - Cursor style sequences ([1 q, [0 q)
+ * - DCS fragments (_Gi=..., other device control strings)
  * - Unicode box drawing / block element artifacts from partial rendering
  * - Null bytes and padding from TUI layout
  * - Repeated whitespace from cursor positioning
  */
 const TUI_ARTIFACT_RE =
-  /\[<?>\d*[;?\d]*[a-zA-Z]|\[<?[a-zA-Z]|\x00+|[\x80-\x9f]|[\u2500-\u257f]|[\u2580-\u259f]|[\u2800-\u28ff]/g;
+  /\[[?>=]*\d*[;?\d]*(?:\$[a-zA-Z]|[a-zA-Z])|\[\d+ [a-zA-Z]|_G[^\\]*\\?|i=\d+[,;][^\s]*|AAAA|\x00+|[\x80-\x9f]|[\u2500-\u257f]|[\u2580-\u259f]|[\u2800-\u28ff]/g;
 
 export function deepStripTuiArtifacts(text: string): string {
   let result = text.replace(TUI_ARTIFACT_RE, " ");
   // Strip orphaned SGR params (e.g. "1;32m" or bare "m" left from split escape sequences)
   result = result.replace(/(?:^|(?<=\s))\d*(?:;\d+)*m/g, " ");
+  // Strip orphaned bracket fragments (e.g. "[1" left after partial CSI removal)
+  result = result.replace(/\[\d{0,3}(?=\s|$)/g, " ");
+  // Strip dot-animation noise: 5+ consecutive dots collapse to "...".
+  // TUI tools like crush show "..............." loading animations that cycle with
+  // random characters replacing individual dots. The long dot runs get collapsed
+  // so labels like "Working..." remain clean; standalone noise frames become short
+  // enough to be filtered by pattern extraction's length/entropy checks.
+  result = result.replace(/\.{5,}/g, "...");
   // Collapse multiple spaces
   result = result.replace(/ {2,}/g, " ");
   // Collapse multiple newlines
