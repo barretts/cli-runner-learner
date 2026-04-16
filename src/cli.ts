@@ -11,7 +11,7 @@ import { extractPatterns } from "./engine/pattern-extractor.js";
 import { loadProfile, saveProfile, bootstrapProfile, mergeLearnedPatterns, registerStructuralIndicators } from "./engine/profile-manager.js";
 import { drive } from "./runner/driver.js";
 import { createLLMClient } from "./llm/client.js";
-import { discoverTool } from "./engine/discovery.js";
+import { discoverTool, detectReduceMotionEnv } from "./engine/discovery.js";
 import { planNextProbe, type PlannedProbe } from "./engine/probe-planner.js";
 import type { ProbeResult } from "./types.js";
 import { diagnoseLearnFailures, heal, applyHealPatches, type HealerContext } from "./engine/healer.js";
@@ -285,6 +285,17 @@ program
     profile.interaction_mode = interactionMode;
     profile.launch.default_args = args;
 
+    // Detect reduce-motion env vars for this tool
+    if (!profile.reduce_motion_env) {
+      const reduceEnv = detectReduceMotionEnv(command, profile.discovery?.help_text);
+      if (Object.keys(reduceEnv).length > 0) {
+        profile.reduce_motion_env = reduceEnv;
+        console.log(`[learn] Reduce-motion env: ${JSON.stringify(reduceEnv)}`);
+      }
+    } else {
+      console.log(`[learn] Using existing reduce-motion env: ${JSON.stringify(profile.reduce_motion_env)}`);
+    }
+
     console.log(`[learn] Tool: ${toolId}`);
     console.log(`[learn] Command: ${command} ${args.join(" ")}`);
     console.log(`[learn] Max rounds: ${maxRounds}, confidence threshold: ${threshold}`);
@@ -338,6 +349,7 @@ program
         max_session_ms: maxProbeMs,
         session_dir: PROJECT_ROOT,
         session_id: sessionId,
+        env: profile.reduce_motion_env,
       });
 
       console.log(`[learn] Session config: settle=${settleMs}ms, maxProbe=${maxProbeMs}ms`);
@@ -436,17 +448,20 @@ program
         for (const d of diagnosis) console.log(`  [${d.failure_class}] ${d.detail}`);
 
         // Check for repeated signatures (non-convergent)
-        // Compare against the most recent heal round, not the cumulative set.
-        // If the set shrank or changed composition, that's progress -- continue.
-        const prevHealRound = learnState.healing_rounds.length > 0
-          ? learnState.healing_rounds[learnState.healing_rounds.length - 1]
+        // Require at least 2 consecutive matching heal rounds before giving up.
+        // A single matching round isn't enough — healer suggestions need a round to take effect.
+        const healRounds = learnState.healing_rounds;
+        const prev2 = healRounds.length >= 2
+          ? [healRounds[healRounds.length - 1], healRounds[healRounds.length - 2]]
           : null;
-        const isNonConvergent = prevHealRound !== null &&
+        const isNonConvergent = prev2 !== null &&
           signatures.length > 0 &&
-          signatures.length === prevHealRound.failure_signatures.length &&
-          signatures.every((s) => prevHealRound.failure_signatures.includes(s));
+          prev2.every((hr) =>
+            hr.failure_signatures.length === signatures.length &&
+            signatures.every((s) => hr.failure_signatures.includes(s)),
+          );
         if (isNonConvergent) {
-          console.log(`[heal] Same failure signatures as previous heal round -- non-convergent. Stopping.`);
+          console.log(`[heal] Same failure signatures for 3 consecutive heal checks -- non-convergent. Stopping.`);
           learnState.status = "COMPLETED";
           learnState.abort_reason = "Non-convergent: same failure signatures after healing";
           await checkpointLearnState(learnState);
@@ -671,6 +686,81 @@ async function executeProbeStrategy(
       }
       break;
     }
+    case "shortcut":
+      // Send keyboard shortcuts to learn TUI navigation and autocomplete
+      console.log("[probe] Strategy: shortcut (Tab, Shift-Tab, Esc, arrows)");
+      await waitForSettled(session, maxMs);
+      console.log("[probe] Sending Tab...");
+      session.sendTab();
+      await waitForSettled(session, maxMs);
+      if (!session.done) {
+        console.log("[probe] Sending Shift-Tab...");
+        session.sendShiftTab();
+        await waitForSettled(session, maxMs);
+      }
+      if (!session.done) {
+        console.log("[probe] Sending Arrow-Down...");
+        session.sendArrowDown();
+        await waitForSettled(session, maxMs);
+      }
+      if (!session.done) {
+        console.log("[probe] Sending Escape...");
+        session.sendEsc();
+        await waitForSettledAndExit(session, maxMs);
+      }
+      break;
+    case "ctrl_c":
+      // Send Ctrl-C to test interrupt/cancel behavior
+      console.log("[probe] Strategy: ctrl_c (send Ctrl-C after settle)");
+      await waitForSettled(session, maxMs);
+      console.log("[probe] Sending Ctrl-C...");
+      session.sendCtrlC();
+      await waitForSettledAndExit(session, maxMs);
+      break;
+    case "explore": {
+      // Send discovery/help commands to learn tool-specific help and exit
+      const helpCmd = inputText ?? "/help";
+      console.log(`[probe] Strategy: explore (send "${helpCmd}" after settle)`);
+      await waitForSettled(session, maxMs);
+      console.log(`[probe] Sending '${helpCmd}'...`);
+      session.sendText(helpCmd + "\r");
+      await waitForSettledAndExit(session, maxMs);
+      break;
+    }
+    case "multi_turn": {
+      // Multi-turn: send input, wait, send follow-up to learn conversation flow
+      const first = inputText ?? "hello";
+      console.log(`[probe] Strategy: multi_turn (send "${first}", then follow-up)`);
+      await waitForSettled(session, maxMs);
+      console.log(`[probe] Sending first message '${first}'...`);
+      session.sendText(first + "\r");
+      await waitForSettled(session, maxMs);
+      if (!session.done) {
+        console.log("[probe] Sending follow-up 'what can you do?'...");
+        session.sendText("what can you do?\r");
+        await waitForSettledAndExit(session, maxMs);
+      }
+      break;
+    }
+    case "permission_flow":
+      // Trigger a side-effect, detect permission prompt, auto-accept
+      console.log("[probe] Strategy: permission_flow (trigger side-effect, auto-accept)");
+      await waitForSettled(session, maxMs);
+      console.log("[probe] Sending side-effect command...");
+      session.sendText("create a file called /tmp/clr-probe-test.txt with the word test\r");
+      console.log("[probe] Waiting for permission/confirmation prompt...");
+      await waitForSettled(session, maxMs);
+      if (!session.done) {
+        console.log("[probe] Sending 'y' to accept...");
+        session.sendText("y\r");
+        await waitForSettled(session, maxMs);
+      }
+      if (!session.done) {
+        // Some tools need a second confirmation or show results
+        console.log("[probe] Waiting for completion...");
+        await waitForSettledAndExit(session, maxMs);
+      }
+      break;
     case "prompt_response":
       // Send a side-effect command that triggers a permission prompt,
       // then respond affirmatively to capture the prompting state.

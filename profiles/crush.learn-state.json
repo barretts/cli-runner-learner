@@ -1,70 +1,53 @@
 {
   "schema_version": "1.0",
-  "session_id": "crush-learn-1776318885133",
+  "session_id": "crush-learn-1776341233782",
   "tool_id": "crush",
   "tool_command": "crush",
-  "started_at": "2026-04-16T05:54:45.133Z",
-  "updated_at": "2026-04-16T05:55:17.099Z",
+  "started_at": "2026-04-16T12:07:13.782Z",
+  "updated_at": "2026-04-16T12:08:19.498Z",
   "status": "COMPLETED",
-  "current_round": 3,
-  "max_rounds": 8,
+  "current_round": 2,
+  "max_rounds": 16,
   "confidence_threshold": 0.8,
   "confidence_history": [
-    0.37142857142857144,
-    0.37142857142857144,
-    0.37142857142857144
+    0.625,
+    0.8194642857142856
   ],
   "completed_probes": [
     {
       "round": 0,
       "strategy": "observe",
-      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776318893945.jsonl",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
       "states_observed": [
-        "completed"
+        "startup",
+        "ready",
+        "prompting"
       ]
     },
     {
       "round": 1,
-      "strategy": "enter",
-      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776318901985.jsonl",
+      "strategy": "multi_turn",
+      "input_text": "explain the difference between a process and a thread in one sentence",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
       "states_observed": [
-        "completed"
-      ]
-    },
-    {
-      "round": 2,
-      "strategy": "observe",
-      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-2-1776318916577.jsonl",
-      "states_observed": [
-        "completed"
+        "startup",
+        "ready",
+        "thinking",
+        "working",
+        "ready",
+        "thinking",
+        "working",
+        "ready",
+        "prompting"
       ]
     }
   ],
-  "healing_rounds": [
-    {
-      "round": 1,
-      "failure_signatures": [
-        "state_gap:ready has zero learned patterns",
-        "state_gap:working has zero learned patterns",
-        "state_gap:thinking has zero learned patterns",
-        "state_gap:prompting has zero learned patterns"
-      ],
-      "decision": "RETRY",
-      "patches_applied": 2,
-      "timestamp": "2026-04-16T05:55:16.575Z"
-    }
-  ],
-  "failure_signatures_seen": [
-    "state_gap:ready has zero learned patterns",
-    "state_gap:working has zero learned patterns",
-    "state_gap:thinking has zero learned patterns",
-    "state_gap:prompting has zero learned patterns"
-  ],
+  "healing_rounds": [],
+  "failure_signatures_seen": [],
   "config": {
-    "settle_timeout_ms": 3000,
+    "settle_timeout_ms": 5000,
     "max_probe_session_ms": 45000,
     "heal_mode": "auto",
     "max_heal_rounds": 4
-  },
-  "abort_reason": "Non-convergent: same failure signatures after healing"
+  }
 }

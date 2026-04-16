@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "tool_id": "agent",
   "tool_command": "/Users/bsonntag/.local/bin/agent",
-  "last_updated": "2026-04-15T21:14:26.605Z",
-  "confidence": 0.538073593073593,
-  "probe_count": 13,
+  "last_updated": "2026-04-16T14:10:26.461Z",
+  "confidence": 0.6944357722402597,
+  "probe_count": 18,
   "needs_review": false,
   "interaction_mode": "interactive",
   "launch": {
@@ -15,7 +15,7 @@
   },
   "states": {
     "startup": {
-      "description": "Initial TUI render with character-by-character animation before the prompt is interactive",
+      "description": "Initial state immediately after process launch before the first prompt appears; typically lasts <500ms and shows initialization messages, version banners, or config loading output",
       "indicators": [
         {
           "type": "output_glob",
@@ -24,6 +24,22 @@
         {
           "type": "output_glob",
           "pattern": "*initializ*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*v2026*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*hint: /auto-run*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*Cursor Agent*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(version|loading|initializing|config|welcome|agent v*)*"
         }
       ],
       "timeout_sec": 30
@@ -46,6 +62,14 @@
         {
           "type": "output_glob",
           "pattern": "hint: * to skip all approvals"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*-dccdccd"
+        },
+        {
+          "type": "silence_after_output_ms",
+          "value": 3000
         }
       ]
     },
@@ -109,8 +133,17 @@
       "sub_prompts": []
     },
     "thinking": {
-      "description": "Tool is processing/reasoning",
-      "indicators": []
+      "description": "State after user input is submitted and before output begins streaming; tool is processing/calling LLM; may show a spinner, ellipsis, or cursor without new text",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*(*...*|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏)*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(Thinking|Processing|Calling|Fetching|Running)*"
+        }
+      ]
     },
     "completed": {
       "description": "Tool finished",
@@ -293,11 +326,11 @@
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-2-1776287568760.jsonl",
-      "timestamp": "2026-04-15T21:14:26.602Z",
+      "timestamp": "2026-04-16T14:10:26.453Z",
       "pattern": "hint: * to skip all approvals",
       "classified_as": "ready",
-      "occurrences": 8,
-      "confidence": 0.5383333333333333
+      "occurrences": 17,
+      "confidence": 0.6886076833333332
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/agent-probe-0-1776287442211.jsonl",
@@ -306,10 +339,18 @@
       "classified_as": "working",
       "occurrences": 4,
       "confidence": 0.8600000000000001
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/agent-probe-0-1776348546871.jsonl",
+      "timestamp": "2026-04-16T14:10:26.453Z",
+      "pattern": "*-dccdccd",
+      "classified_as": "ready",
+      "occurrences": 9,
+      "confidence": 0.7661999999999999
     }
   ],
   "metadata": {
-    "terminal_cols": 80,
-    "terminal_rows": 24
+    "terminal_cols": 120,
+    "terminal_rows": 51
   }
 }

@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "tool_id": "opencode",
   "tool_command": "opencode",
-  "last_updated": "2026-04-16T05:57:14.774Z",
-  "confidence": 0.37142857142857144,
-  "probe_count": 6,
-  "needs_review": true,
+  "last_updated": "2026-04-16T12:11:29.640Z",
+  "confidence": 0.7310051587301587,
+  "probe_count": 16,
+  "needs_review": false,
   "interaction_mode": "interactive",
   "launch": {
     "default_args": [],
@@ -28,6 +28,38 @@
         {
           "type": "output_glob",
           "pattern": "�������� ����"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Ask anything..."
+        },
+        {
+          "type": "output_glob",
+          "pattern": "anything... \"Fix"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "\"Fix broken"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "broken tests\""
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Build Gemini"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Gemini 3"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Pro Preview"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Preview OpenRouter"
         }
       ],
       "timeout_sec": 30
@@ -42,6 +74,70 @@
         {
           "type": "output_glob",
           "pattern": "*tab agents*ctrl+p commands*"
+        },
+        {
+          "type": "silence_after_output_ms",
+          "value": 5010
+        },
+        {
+          "type": "output_glob",
+          "pattern": "say hello"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "hello Ask"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Build Big"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Pickle OpenCode"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Zen tab"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Build Big Pickle"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Big Pickle OpenCode"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Ask anything..."
+        },
+        {
+          "type": "output_glob",
+          "pattern": "anything... \"What"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "the tech"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "tech stack"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "tab agentsctrl+p"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "OpenCode Zen"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Build Gemini"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Pro Preview"
         }
       ]
     },
@@ -51,17 +147,75 @@
         {
           "type": "output_glob",
           "pattern": "*Thinking*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "what can you do? ■⬝⬝⬝⬝⬝⬝⬝esc interrupt▣ Build · Big Pickle"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Big Pickle■⬝⬝⬝⬝⬝⬝⬝esc"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Pickle■⬝⬝⬝⬝⬝⬝⬝esc interrupt■■⬝⬝⬝⬝⬝⬝"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "what can you"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "can you do?"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "you do? ▣"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "do? ▣ Build"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "what can you do?"
         }
       ]
     },
     "prompting": {
-      "description": "Tool wants user input",
-      "indicators": [],
+      "description": "Overlay or modal is open for agent/model selection (ctrl+p or /agent command); shows a searchable list of agents before the main prompt is submitted",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "Ask anything*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*(Enter your message|Type a message|> |$ )*"
+        }
+      ],
       "sub_prompts": []
     },
     "thinking": {
-      "description": "Tool is processing/reasoning",
-      "indicators": []
+      "description": "Intermediate reasoning phase between prompt submission and response generation; typically shows spinner, ellipsis, or inline reasoning tokens before the final answer begins streaming.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "*working*|*generating*|*[●⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]*|*···*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*…*|*thinking*|*reasoning*|*▋*|*|*spinner*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Thinking:*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "*■*⬝*■*⬝*"
+        }
+      ]
     },
     "completed": {
       "description": "Tool finished",
@@ -140,11 +294,11 @@
   "learned_patterns": [
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-0-1776288142830.jsonl",
-      "timestamp": "2026-04-15T21:23:47.514Z",
+      "timestamp": "2026-04-16T07:26:43.775Z",
       "pattern": "[?1016$p[?2027$p[?2031$p[?1004$p[?2004$p[?2026$p",
       "classified_as": "startup",
-      "occurrences": 6,
-      "confidence": 1
+      "occurrences": 22,
+      "confidence": 0.7914583333333333
     },
     {
       "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/opencode-probe-0-1776288142830.jsonl",
@@ -161,6 +315,262 @@
       "classified_as": "startup",
       "occurrences": 6,
       "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:23:16.510Z",
+      "pattern": "Ask anything...",
+      "classified_as": "startup",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:23:16.510Z",
+      "pattern": "anything... \"Fix",
+      "classified_as": "startup",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:23:16.510Z",
+      "pattern": "\"Fix broken",
+      "classified_as": "startup",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:23:16.510Z",
+      "pattern": "broken tests\"",
+      "classified_as": "startup",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Build Gemini",
+      "classified_as": "startup",
+      "occurrences": 15,
+      "confidence": 0.7914583333333333
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Gemini 3",
+      "classified_as": "startup",
+      "occurrences": 15,
+      "confidence": 0.7914583333333333
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Pro Preview",
+      "classified_as": "startup",
+      "occurrences": 15,
+      "confidence": 0.7914583333333333
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776324186538.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Preview OpenRouter",
+      "classified_as": "startup",
+      "occurrences": 15,
+      "confidence": 0.7914583333333333
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:24:06.626Z",
+      "pattern": "say hello",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.6499999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:24:06.626Z",
+      "pattern": "hello Ask",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.6499999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:24:06.626Z",
+      "pattern": "Build Big",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.6499999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:24:06.626Z",
+      "pattern": "Pickle OpenCode",
+      "classified_as": "ready",
+      "occurrences": 1,
+      "confidence": 0.6499999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Zen tab",
+      "classified_as": "ready",
+      "occurrences": 14,
+      "confidence": 0.676875
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "what can you do? ■⬝⬝⬝⬝⬝⬝⬝esc interrupt▣ Build · Big Pickle",
+      "classified_as": "working",
+      "occurrences": 5,
+      "confidence": 0.4516666666666666
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Build Big Pickle",
+      "classified_as": "ready",
+      "occurrences": 13,
+      "confidence": 0.6883333333333334
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-1-1776324209246.jsonl",
+      "timestamp": "2026-04-16T07:26:43.775Z",
+      "pattern": "Big Pickle OpenCode",
+      "classified_as": "ready",
+      "occurrences": 13,
+      "confidence": 0.6883333333333334
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-3-1776324304628.jsonl",
+      "timestamp": "2026-04-16T07:26:43.777Z",
+      "pattern": "what files are in this directory?",
+      "classified_as": "prompting",
+      "occurrences": 3,
+      "confidence": 0.4370833333333333
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.616Z",
+      "pattern": "Ask anything...",
+      "classified_as": "ready",
+      "occurrences": 14,
+      "confidence": 0.8899999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.133Z",
+      "pattern": "anything... \"What",
+      "classified_as": "ready",
+      "occurrences": 2,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.133Z",
+      "pattern": "the tech",
+      "classified_as": "ready",
+      "occurrences": 2,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.133Z",
+      "pattern": "tech stack",
+      "classified_as": "ready",
+      "occurrences": 2,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.616Z",
+      "pattern": "tab agentsctrl+p",
+      "classified_as": "ready",
+      "occurrences": 14,
+      "confidence": 0.8899999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.136Z",
+      "pattern": "Big Pickle■⬝⬝⬝⬝⬝⬝⬝esc",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.136Z",
+      "pattern": "Pickle■⬝⬝⬝⬝⬝⬝⬝esc interrupt■■⬝⬝⬝⬝⬝⬝",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.136Z",
+      "pattern": "what can you",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:09:48.136Z",
+      "pattern": "can you do?",
+      "classified_as": "working",
+      "occurrences": 1,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.617Z",
+      "pattern": "you do? ▣",
+      "classified_as": "working",
+      "occurrences": 7,
+      "confidence": 0.8459999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.616Z",
+      "pattern": "OpenCode Zen",
+      "classified_as": "ready",
+      "occurrences": 12,
+      "confidence": 0.8899999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.616Z",
+      "pattern": "Build Gemini",
+      "classified_as": "ready",
+      "occurrences": 6,
+      "confidence": 0.8459999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.616Z",
+      "pattern": "Pro Preview",
+      "classified_as": "ready",
+      "occurrences": 6,
+      "confidence": 0.8459999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.617Z",
+      "pattern": "do? ▣ Build",
+      "classified_as": "working",
+      "occurrences": 6,
+      "confidence": 0.8459999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/opencode-probe-0-1776341362002.jsonl",
+      "timestamp": "2026-04-16T12:11:29.617Z",
+      "pattern": "what can you do?",
+      "classified_as": "working",
+      "occurrences": 6,
+      "confidence": 0.8459999999999999
     }
   ],
   "discovery": {
@@ -177,7 +587,7 @@
     "discovered_at": "2026-04-15T21:22:13.256Z"
   },
   "metadata": {
-    "terminal_cols": 85,
-    "terminal_rows": 30
+    "terminal_cols": 120,
+    "terminal_rows": 51
   }
 }

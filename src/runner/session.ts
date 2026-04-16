@@ -1,17 +1,19 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { mkdir } from "node:fs/promises";
-import { createInterface, type Interface } from "node:readline";
-import { join, resolve } from "node:path";
+import * as pty from "node-pty";
+import { mkdir, open, type FileHandle } from "node:fs/promises";
+import { join } from "node:path";
 import type { SessionConfig, FifoEvent } from "../types.js";
 
-const HARNESS_PATH = resolve(new URL("../../harness/pty-recorder.exp", import.meta.url).pathname);
-
 export class Session {
-  private proc: ChildProcess | null = null;
-  private rl: Interface | null = null;
+  private ptyProcess: pty.IPty | null = null;
+  private transcriptFd: FileHandle | null = null;
   private pendingEvents: FifoEvent[] = [];
   private eventResolvers: Array<(event: FifoEvent) => void> = [];
   private _done = false;
+  private settleTimer: ReturnType<typeof setTimeout> | null = null;
+  private sessionTimer: ReturnType<typeof setTimeout> | null = null;
+  private settledEmitted = false;
+  private lastOutputTs = 0;
+  private sessionStartTs = 0;
 
   readonly config: SessionConfig;
 
@@ -20,78 +22,105 @@ export class Session {
   }
 
   /**
-   * Spawn the expect harness. Communication via stdin (commands) / stdout (events).
+   * Spawn the target command directly in a PTY via node-pty.
+   * All I/O is recorded to a JSONL transcript. Settle detection and
+   * max-session timeout are handled in-process.
    */
   async start(): Promise<void> {
     await mkdir(join(this.config.transcript_path, ".."), { recursive: true });
 
     const env: Record<string, string> = {
       ...(process.env as Record<string, string>),
-      CLR_COMMAND: this.config.command,
-      CLR_ARGS: this.config.args.join(" "),
-      CLR_TRANSCRIPT: this.config.transcript_path,
-      CLR_SETTLE_MS: String(this.config.settle_timeout_ms),
-      CLR_MAX_SESSION_MS: String(this.config.max_session_ms),
+      // Reduce-motion hint — suppresses animations where supported
+      REDUCE_MOTION: "1",
     };
 
     if (this.config.env) {
       Object.assign(env, this.config.env);
     }
 
-    console.log(`[session] Spawning harness: expect ${HARNESS_PATH}`);
-    console.log(`[session]   CLR_COMMAND=${env.CLR_COMMAND}`);
-    console.log(`[session]   CLR_ARGS=${env.CLR_ARGS || '(none)'}`);
-    console.log(`[session]   CLR_SETTLE_MS=${env.CLR_SETTLE_MS}`);
-    console.log(`[session]   CLR_MAX_SESSION_MS=${env.CLR_MAX_SESSION_MS}`);
-    console.log(`[session]   CLR_TRANSCRIPT=${env.CLR_TRANSCRIPT}`);
+    console.log(`[session] Spawning via node-pty: ${this.config.command} ${this.config.args.join(" ")}`);
+    console.log(`[session]   settle_ms=${this.config.settle_timeout_ms}`);
+    console.log(`[session]   max_session_ms=${this.config.max_session_ms}`);
+    console.log(`[session]   transcript=${this.config.transcript_path}`);
 
-    this.proc = spawn("expect", [HARNESS_PATH], {
+    // Open transcript file
+    this.transcriptFd = await open(this.config.transcript_path, "w");
+
+    this.sessionStartTs = Date.now();
+    this.lastOutputTs = this.sessionStartTs;
+
+    // Spawn the command in a real PTY
+    this.ptyProcess = pty.spawn(this.config.command, this.config.args, {
+      name: "xterm-256color",
+      cols: 120,
+      rows: 40,
+      cwd: process.cwd(),
       env,
-      stdio: ["pipe", "pipe", "pipe"],
     });
 
-    // Suppress EPIPE on stdin when process exits before we stop writing
-    this.proc.stdin?.on("error", () => {});
+    const pid = this.ptyProcess.pid;
+    console.log(`[session] PTY spawned: pid=${pid}`);
 
-    this.proc.stderr?.on("data", (chunk: Buffer) => {
-      const text = chunk.toString().trim();
-      if (text) process.stderr.write(`[harness] ${text}\n`);
+    // Write started meta event
+    await this.writeTranscript("meta", { event: "started", value: pid });
+    this.emitEvent({ type: "started", value: pid });
+
+    // Handle output
+    this.ptyProcess.onData((data: string) => {
+      if (this._done) return;
+      const now = Date.now();
+      this.lastOutputTs = now;
+      this.settledEmitted = false;
+
+      // Reset settle timer on every output
+      this.resetSettleTimer();
+
+      // Hex-encode and record
+      const hex = Buffer.from(data).toString("hex");
+      this.writeTranscript("recv", { data: hex }).catch(() => {});
+
+      // Emit output event
+      this.emitEvent({ type: "output", data: hex });
     });
 
-    this.proc.on("close", () => {
+    // Handle exit
+    this.ptyProcess.onExit(({ exitCode, signal }) => {
+      if (this._done) return;
+      const code = exitCode ?? (signal ?? 0);
+      console.log(`[session] PTY exited: code=${exitCode}, signal=${signal}`);
+
+      this.clearTimers();
+      this.writeTranscript("meta", { event: "exit", value: code }).catch(() => {});
       this._done = true;
+      this.emitEvent({ type: "exit", value: code });
+
+      // Resolve any remaining waiters
       for (const resolve of this.eventResolvers) {
-        resolve({ type: "exit", value: 0 });
+        resolve({ type: "exit", value: code });
       }
       this.eventResolvers = [];
     });
 
-    // Read events from harness stdout
-    this.rl = createInterface({ input: this.proc.stdout! });
+    // Start settle timer
+    this.resetSettleTimer();
 
-    this.rl.on("line", (line: string) => {
-      const event = parseFifoEvent(line);
-      if (!event) {
-        if (line.trim()) console.log(`[session] Unparseable harness line: ${line.trim().substring(0, 120)}`);
-        return;
-      }
+    // Start max session timer
+    this.sessionTimer = setTimeout(() => {
+      if (this._done) return;
+      const elapsed = Date.now() - this.sessionStartTs;
+      console.log(`[session] Max session timeout (${this.config.max_session_ms}ms) reached after ${elapsed}ms`);
+      this.writeTranscript("meta", { event: "timeout", value: elapsed }).catch(() => {});
+      this.emitEvent({ type: "exit", value: -1 });
 
-      const evtSummary = event.type === "output"
-        ? `output (${event.data?.length ?? 0} hex chars)`
-        : `${event.type}: ${event.value ?? event.data ?? ''}`;
-      console.log(`[session] Event: ${evtSummary}`);
-
-      if (this.eventResolvers.length > 0) {
-        const resolve = this.eventResolvers.shift()!;
-        resolve(event);
-      } else {
-        this.pendingEvents.push(event);
-      }
-    });
-
-    this.rl.on("close", () => {
-      this._done = true;
-    });
+      // Try graceful then hard kill
+      try { this.ptyProcess?.write("\x03"); } catch {}
+      try { this.ptyProcess?.write("\x03"); } catch {}
+      setTimeout(() => {
+        try { this.ptyProcess?.kill(); } catch {}
+        this._done = true;
+      }, 1000);
+    }, this.config.max_session_ms);
   }
 
   get done(): boolean {
@@ -99,7 +128,8 @@ export class Session {
   }
 
   /**
-   * Wait for the next event from the harness, with timeout.
+   * Wait for the next event, with timeout.
+   * If no event arrives within timeout_ms, returns a synthetic "settled" event.
    */
   nextEvent(timeout_ms: number): Promise<FifoEvent> {
     if (this.pendingEvents.length > 0) {
@@ -126,85 +156,151 @@ export class Session {
     });
   }
 
-  /**
-   * Send a command to the harness via stdin.
-   */
-  sendCommand(cmd: string): void {
-    if (this._done) {
-      console.log(`[session] sendCommand(${cmd}) skipped -- session done`);
-      return;
-    }
-    console.log(`[session] Sending command: ${cmd}`);
-    try {
-      if (this.proc?.stdin?.writable) {
-        this.proc.stdin.write(cmd + "\n");
-      } else {
-        console.log(`[session] stdin not writable, command dropped`);
-      }
-    } catch {
-      console.log(`[session] EPIPE on stdin write -- process already exited`);
-    }
-  }
+  // ---- Keyboard send methods ----
 
   sendEnter(): void {
-    this.sendCommand("SEND:enter");
+    this.writeKey("\r", "enter");
   }
 
   sendCtrlC(): void {
-    this.sendCommand("SEND:ctrl-c");
+    this.writeKey("\x03", "ctrl-c");
+  }
+
+  sendCtrlD(): void {
+    this.writeKey("\x04", "ctrl-d");
+  }
+
+  sendTab(): void {
+    this.writeKey("\t", "tab");
+  }
+
+  sendShiftTab(): void {
+    this.writeKey("\x1b[Z", "shift-tab");
+  }
+
+  sendEsc(): void {
+    this.writeKey("\x1b", "esc");
+  }
+
+  sendArrowUp(): void {
+    this.writeKey("\x1b[A", "arrow-up");
+  }
+
+  sendArrowDown(): void {
+    this.writeKey("\x1b[B", "arrow-down");
+  }
+
+  sendArrowLeft(): void {
+    this.writeKey("\x1b[D", "arrow-left");
+  }
+
+  sendArrowRight(): void {
+    this.writeKey("\x1b[C", "arrow-right");
   }
 
   sendText(text: string): void {
-    const hex = Buffer.from(text).toString("hex");
-    this.sendCommand(`SEND:text:${hex}`);
+    this.writeKey(text, `text(${text.length})`);
+  }
+
+  sendKey(seq: string): void {
+    this.writeKey(seq, `key(${Buffer.from(seq).toString("hex")})`);
   }
 
   sendKill(): void {
-    this.sendCommand("KILL");
+    if (this._done) {
+      console.log(`[session] sendKill skipped -- session done`);
+      return;
+    }
+    console.log(`[session] Sending kill`);
+    this.writeTranscript("meta", { event: "kill" }).catch(() => {});
+    try { this.ptyProcess?.kill(); } catch {}
   }
 
   /**
-   * Clean up: kill process.
+   * Clean up: kill PTY process, close transcript.
    */
   async cleanup(): Promise<void> {
-    console.log(`[session] Cleanup: done=${this._done}, proc=${this.proc ? 'alive' : 'null'}`);
-    if (this.proc && !this._done) {
-      console.log(`[session] Sending SIGTERM...`);
-      this.proc.kill("SIGTERM");
-      await new Promise((r) => setTimeout(r, 1000));
-      if (!this._done) {
-        console.log(`[session] Still alive after 1s, sending SIGKILL`);
-        this.proc.kill("SIGKILL");
-      }
+    console.log(`[session] Cleanup: done=${this._done}, pty=${this.ptyProcess ? 'alive' : 'null'}`);
+    this.clearTimers();
+
+    if (this.ptyProcess && !this._done) {
+      console.log(`[session] Killing PTY process...`);
+      try { this.ptyProcess.write("\x03"); } catch {}
+      await new Promise((r) => setTimeout(r, 500));
+      try { this.ptyProcess.kill(); } catch {}
+      await new Promise((r) => setTimeout(r, 500));
+      this._done = true;
     }
-    this.rl?.close();
+
+    if (this.transcriptFd) {
+      try { await this.transcriptFd.close(); } catch {}
+      this.transcriptFd = null;
+    }
     console.log(`[session] Cleanup complete`);
   }
-}
 
-function parseFifoEvent(line: string): FifoEvent | null {
-  const trimmed = line.trim();
-  if (!trimmed) return null;
+  // ---- Private helpers ----
 
-  const colonIdx = trimmed.indexOf(":");
-  if (colonIdx === -1) return null;
+  private writeKey(seq: string, label: string): void {
+    if (this._done) {
+      console.log(`[session] send(${label}) skipped -- session done`);
+      return;
+    }
+    console.log(`[session] Sending: ${label}`);
+    const hex = Buffer.from(seq).toString("hex");
+    this.writeTranscript("send", { data: hex }).catch(() => {});
+    try {
+      this.ptyProcess?.write(seq);
+    } catch {
+      console.log(`[session] Write failed for ${label} -- PTY may have exited`);
+    }
+  }
 
-  const type = trimmed.substring(0, colonIdx).toLowerCase();
-  const payload = trimmed.substring(colonIdx + 1);
+  private resetSettleTimer(): void {
+    if (this.settleTimer) clearTimeout(this.settleTimer);
+    this.settleTimer = setTimeout(() => {
+      if (this._done || this.settledEmitted) return;
+      const silenceMs = Date.now() - this.lastOutputTs;
+      if (silenceMs >= this.config.settle_timeout_ms) {
+        this.settledEmitted = true;
+        console.log(`[session] Settled after ${silenceMs}ms of silence`);
+        this.writeTranscript("meta", { event: "settled", value: silenceMs }).catch(() => {});
+        this.emitEvent({ type: "settled", value: silenceMs });
+      }
+    }, this.config.settle_timeout_ms);
+  }
 
-  switch (type) {
-    case "output":
-      return { type: "output", data: payload };
-    case "settled":
-      return { type: "settled", value: parseInt(payload, 10) };
-    case "exit":
-      return { type: "exit", value: parseInt(payload, 10) };
-    case "started":
-      return { type: "started", value: parseInt(payload, 10) };
-    case "timeout":
-      return { type: "exit", value: -1 };
-    default:
-      return null;
+  private clearTimers(): void {
+    if (this.settleTimer) { clearTimeout(this.settleTimer); this.settleTimer = null; }
+    if (this.sessionTimer) { clearTimeout(this.sessionTimer); this.sessionTimer = null; }
+  }
+
+  private emitEvent(event: FifoEvent): void {
+    const evtSummary = event.type === "output"
+      ? `output (${event.data?.length ?? 0} hex chars)`
+      : `${event.type}: ${event.value ?? event.data ?? ""}`;
+    console.log(`[session] Event: ${evtSummary}`);
+
+    if (this.eventResolvers.length > 0) {
+      const resolve = this.eventResolvers.shift()!;
+      resolve(event);
+    } else {
+      this.pendingEvents.push(event);
+    }
+  }
+
+  private async writeTranscript(
+    type: string,
+    fields: Record<string, string | number>,
+  ): Promise<void> {
+    if (!this.transcriptFd) return;
+    const ts = Date.now();
+    const obj: Record<string, unknown> = { ts, type, ...fields };
+    try {
+      await this.transcriptFd.write(JSON.stringify(obj) + "\n");
+    } catch {
+      // transcript write failure is non-fatal
+    }
   }
 }
 
@@ -214,6 +310,7 @@ function parseFifoEvent(line: string): FifoEvent | null {
 export function createSessionConfig(opts: {
   command: string;
   args?: string[];
+  env?: Record<string, string>;
   settle_timeout_ms?: number;
   max_session_ms?: number;
   session_dir: string;
@@ -222,10 +319,11 @@ export function createSessionConfig(opts: {
   return {
     command: opts.command,
     args: opts.args ?? [],
+    env: opts.env,
     settle_timeout_ms: opts.settle_timeout_ms ?? 3000,
     max_session_ms: opts.max_session_ms ?? 120000,
     transcript_path: join(opts.session_dir, "transcripts", `${opts.session_id}.jsonl`),
-    control_fifo: "",  // unused now
-    event_fifo: "",    // unused now
+    control_fifo: "",  // unused legacy field
+    event_fifo: "",    // unused legacy field
   };
 }
