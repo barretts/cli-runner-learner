@@ -4,3 +4,4 @@ transcripts/
 logs/
 *.log
 .logs/
+generated/

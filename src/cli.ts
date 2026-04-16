@@ -16,6 +16,8 @@ import { planNextProbe, type PlannedProbe } from "./engine/probe-planner.js";
 import type { ProbeResult } from "./types.js";
 import { diagnoseLearnFailures, heal, applyHealPatches, type HealerContext } from "./engine/healer.js";
 import { initLearnState, checkpointLearnState, loadLearnState, clearLearnState } from "./engine/learn-state.js";
+import { generateSkillMarkdown } from "./export/skill-generator.js";
+import { generateAdapterTypeScript, generateAdapterJSON } from "./export/adapter-generator.js";
 
 const PROJECT_ROOT = resolve(new URL("../", import.meta.url).pathname);
 
@@ -914,6 +916,73 @@ program
     });
 
     await orchestrator.run();
+  });
+
+// ---- export-skill subcommand ----
+
+program
+  .command("export-skill")
+  .description("Generate a skill markdown file from a learned tool profile")
+  .requiredOption("--tool <id>", "Tool ID (must have a learned profile)")
+  .option("--output <path>", "Output file path (default: generated/skills/<tool>.md)")
+  .option("--no-overrides", "Skip manual overrides from adapter-overrides.json")
+  .action(async (opts) => {
+    const useOverrides = opts.overrides !== false;
+    const profile = await loadProfile(opts.tool);
+    if (!profile) {
+      const profileDir = join(PROJECT_ROOT, "profiles");
+      console.error(`No profile found for tool: ${opts.tool}`);
+      console.error(`Available profiles: ${(await import("node:fs")).readdirSync(profileDir).filter((f: string) => f.endsWith(".json") && !f.includes("learn-state")).map((f: string) => f.replace(".json", "")).join(", ")}`);
+      process.exit(1);
+    }
+
+    const md = generateSkillMarkdown(profile, useOverrides);
+    const outDir = join(PROJECT_ROOT, "generated", "skills");
+    await mkdir(outDir, { recursive: true });
+    const outPath = opts.output ?? join(outDir, `${opts.tool}.md`);
+
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(outPath, md, "utf-8");
+    console.log(`[export-skill] Generated: ${outPath}`);
+    console.log(`[export-skill] Profile confidence: ${(profile.confidence * 100).toFixed(1)}%`);
+    console.log(`[export-skill] States: ${Object.keys(profile.states).join(", ")}`);
+    console.log(`[export-skill] Patterns: ${profile.learned_patterns.length}`);
+    console.log(`[export-skill] Overrides: ${useOverrides ? "applied" : "skipped"}`);
+  });
+
+// ---- export-adapter subcommand ----
+
+program
+  .command("export-adapter")
+  .description("Generate an AgentThreader-compatible AdapterPreset from a learned profile")
+  .requiredOption("--tool <id>", "Tool ID (must have a learned profile)")
+  .option("--format <fmt>", "Output format: ts or json", "ts")
+  .option("--output <path>", "Output file path")
+  .option("--no-overrides", "Skip manual overrides from adapter-overrides.json")
+  .action(async (opts) => {
+    const useOverrides = opts.overrides !== false;
+    const profile = await loadProfile(opts.tool);
+    if (!profile) {
+      console.error(`No profile found for tool: ${opts.tool}`);
+      process.exit(1);
+    }
+
+    const isTS = opts.format === "ts";
+    const content = isTS
+      ? generateAdapterTypeScript(profile, useOverrides)
+      : generateAdapterJSON(profile, useOverrides);
+
+    const ext = isTS ? "ts" : "json";
+    const outDir = join(PROJECT_ROOT, "generated", "adapters");
+    await mkdir(outDir, { recursive: true });
+    const outPath = opts.output ?? join(outDir, `${opts.tool}-preset.${ext}`);
+
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(outPath, content, "utf-8");
+    console.log(`[export-adapter] Generated: ${outPath}`);
+    console.log(`[export-adapter] Format: ${opts.format}`);
+    console.log(`[export-adapter] Profile confidence: ${(profile.confidence * 100).toFixed(1)}%`);
+    console.log(`[export-adapter] Overrides: ${useOverrides ? "applied" : "skipped"}`);
   });
 
 program.parse();
