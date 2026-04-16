@@ -925,7 +925,9 @@ program
   .description("Generate a skill markdown file from a learned tool profile")
   .requiredOption("--tool <id>", "Tool ID (must have a learned profile)")
   .option("--output <path>", "Output file path (default: generated/skills/<tool>.md)")
+  .option("--no-overrides", "Skip manual overrides from adapter-overrides.json")
   .action(async (opts) => {
+    const useOverrides = opts.overrides !== false;
     const profile = await loadProfile(opts.tool);
     if (!profile) {
       const profileDir = join(PROJECT_ROOT, "profiles");
@@ -934,7 +936,7 @@ program
       process.exit(1);
     }
 
-    const md = generateSkillMarkdown(profile);
+    const md = generateSkillMarkdown(profile, useOverrides);
     const outDir = join(PROJECT_ROOT, "generated", "skills");
     await mkdir(outDir, { recursive: true });
     const outPath = opts.output ?? join(outDir, `${opts.tool}.md`);
@@ -945,6 +947,7 @@ program
     console.log(`[export-skill] Profile confidence: ${(profile.confidence * 100).toFixed(1)}%`);
     console.log(`[export-skill] States: ${Object.keys(profile.states).join(", ")}`);
     console.log(`[export-skill] Patterns: ${profile.learned_patterns.length}`);
+    console.log(`[export-skill] Overrides: ${useOverrides ? "applied" : "skipped"}`);
   });
 
 // ---- export-adapter subcommand ----
@@ -955,7 +958,9 @@ program
   .requiredOption("--tool <id>", "Tool ID (must have a learned profile)")
   .option("--format <fmt>", "Output format: ts or json", "ts")
   .option("--output <path>", "Output file path")
+  .option("--no-overrides", "Skip manual overrides from adapter-overrides.json")
   .action(async (opts) => {
+    const useOverrides = opts.overrides !== false;
     const profile = await loadProfile(opts.tool);
     if (!profile) {
       console.error(`No profile found for tool: ${opts.tool}`);
@@ -964,8 +969,8 @@ program
 
     const isTS = opts.format === "ts";
     const content = isTS
-      ? generateAdapterTypeScript(profile)
-      : generateAdapterJSON(profile);
+      ? generateAdapterTypeScript(profile, useOverrides)
+      : generateAdapterJSON(profile, useOverrides);
 
     const ext = isTS ? "ts" : "json";
     const outDir = join(PROJECT_ROOT, "generated", "adapters");
@@ -977,6 +982,7 @@ program
     console.log(`[export-adapter] Generated: ${outPath}`);
     console.log(`[export-adapter] Format: ${opts.format}`);
     console.log(`[export-adapter] Profile confidence: ${(profile.confidence * 100).toFixed(1)}%`);
+    console.log(`[export-adapter] Overrides: ${useOverrides ? "applied" : "skipped"}`);
   });
 
 program.parse();

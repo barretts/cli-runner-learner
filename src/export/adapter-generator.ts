@@ -3,9 +3,65 @@
  *
  * The output is a TypeScript file that can be dropped into AgentThreader's
  * src/lib/adapters/ directory or imported as a module.
+ *
+ * Supports manual overrides via adapter-overrides.json to fill gaps that
+ * learning cannot yet discover automatically.
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { ToolProfile } from "../types.js";
+
+const PROJECT_ROOT = resolve(new URL("../../", import.meta.url).pathname);
+
+export interface ForbiddenArgEntry {
+  flag: string;
+  reason: string;
+}
+
+export interface AdapterOverride {
+  promptDelivery?: "stdin" | "positional-arg" | "flag";
+  promptFlag?: string;
+  defaultArgs?: string[];
+  forbiddenArgs?: ForbiddenArgEntry[];
+  stdinIgnore?: boolean;
+  toolCallsHiddenInStdout?: boolean;
+  needsLineBuffering?: boolean;
+  maxTurns?: number;
+  noisePatterns?: string[];
+  transientErrorPatterns?: string[];
+  notes?: string[];
+}
+
+let _overridesCache: Record<string, AdapterOverride> | null = null;
+
+/**
+ * Load adapter overrides from adapter-overrides.json.
+ * Returns an empty object if the file doesn't exist.
+ */
+export function loadAdapterOverrides(): Record<string, AdapterOverride> {
+  if (_overridesCache) return _overridesCache;
+  try {
+    const raw = readFileSync(resolve(PROJECT_ROOT, "adapter-overrides.json"), "utf-8");
+    const parsed = JSON.parse(raw);
+    // Filter out $comment and other non-tool keys
+    const overrides: Record<string, AdapterOverride> = {};
+    for (const [key, val] of Object.entries(parsed)) {
+      if (key.startsWith("$")) continue;
+      overrides[key] = val as AdapterOverride;
+    }
+    _overridesCache = overrides;
+    return overrides;
+  } catch {
+    _overridesCache = {};
+    return {};
+  }
+}
+
+/** Reset cache (for testing). */
+export function clearOverridesCache(): void {
+  _overridesCache = null;
+}
 
 export interface GeneratedAdapterPreset {
   id: string;
@@ -31,8 +87,9 @@ export interface GeneratedAdapterPreset {
 
 /**
  * Convert a ToolProfile to a GeneratedAdapterPreset object.
+ * When useOverrides is true (default), merges manual overrides from adapter-overrides.json.
  */
-export function profileToAdapterPreset(profile: ToolProfile): GeneratedAdapterPreset {
+export function profileToAdapterPreset(profile: ToolProfile, useOverrides = true): GeneratedAdapterPreset {
   const discovery = profile.discovery;
 
   // Map interaction mode to prompt delivery
@@ -96,7 +153,7 @@ export function profileToAdapterPreset(profile: ToolProfile): GeneratedAdapterPr
   notes.push(`Typical startup: ${profile.timing.typical_startup_sec}s`);
   notes.push(`Idle threshold: ${profile.timing.idle_threshold_sec}s`);
 
-  return {
+  const base: GeneratedAdapterPreset = {
     id: profile.tool_id,
     command: profile.tool_command,
     promptDelivery,
@@ -115,13 +172,51 @@ export function profileToAdapterPreset(profile: ToolProfile): GeneratedAdapterPr
     transientErrorPatterns: transientPatterns,
     notes,
   };
+
+  if (!useOverrides) return base;
+
+  // Merge manual overrides
+  const overrides = loadAdapterOverrides();
+  const ov = overrides[profile.tool_id];
+  if (!ov) return base;
+
+  // Scalar overrides (replace)
+  if (ov.promptDelivery) base.promptDelivery = ov.promptDelivery;
+  if (ov.promptFlag) base.promptFlag = ov.promptFlag;
+  if (ov.stdinIgnore !== undefined) base.stdinIgnore = ov.stdinIgnore;
+  if (ov.toolCallsHiddenInStdout !== undefined) base.toolCallsHiddenInStdout = ov.toolCallsHiddenInStdout;
+  if (ov.needsLineBuffering !== undefined) base.needsLineBuffering = ov.needsLineBuffering;
+  if (ov.maxTurns !== undefined) base.maxTurns = ov.maxTurns;
+
+  // Array overrides (replace entirely when present)
+  if (ov.defaultArgs) base.defaultArgs = ov.defaultArgs;
+  if (ov.noisePatterns) base.noisePatterns = ov.noisePatterns;
+  if (ov.notes) base.notes = ov.notes;
+
+  // forbiddenArgs from override (profile has no opinion)
+  if (ov.forbiddenArgs) {
+    base.forbiddenArgs = ov.forbiddenArgs.map(e => e.flag);
+  }
+
+  // transientErrorPatterns: merge override + profile-derived, deduplicate
+  if (ov.transientErrorPatterns) {
+    const merged = [...base.transientErrorPatterns];
+    for (const p of ov.transientErrorPatterns) {
+      if (!merged.includes(p)) merged.push(p);
+    }
+    base.transientErrorPatterns = merged;
+  }
+
+  return base;
 }
 
 /**
  * Generate TypeScript source for an AdapterPreset.
  */
-export function generateAdapterTypeScript(profile: ToolProfile): string {
-  const preset = profileToAdapterPreset(profile);
+export function generateAdapterTypeScript(profile: ToolProfile, useOverrides = true): string {
+  const preset = profileToAdapterPreset(profile, useOverrides);
+  const overrides = useOverrides ? loadAdapterOverrides() : {};
+  const hasOverrides = profile.tool_id in overrides;
   const constName = profile.tool_id.toUpperCase().replace(/-/g, "_") + "_PRESET";
   const lines: string[] = [];
 
@@ -129,6 +224,9 @@ export function generateAdapterTypeScript(profile: ToolProfile): string {
   lines.push(` * Auto-generated adapter preset for ${profile.tool_id}.`);
   lines.push(` * Generated by cli-runner-learner from learned profile.`);
   lines.push(` * Profile confidence: ${(profile.confidence * 100).toFixed(1)}%`);
+  if (hasOverrides) {
+    lines.push(` * Manual overrides applied: yes (adapter-overrides.json)`);
+  }
   lines.push(` * Generated: ${new Date().toISOString()}`);
   lines.push(` */`);
   lines.push(``);
@@ -142,7 +240,15 @@ export function generateAdapterTypeScript(profile: ToolProfile): string {
     lines.push(`  promptFlag: ${JSON.stringify(preset.promptFlag)},`);
   }
   lines.push(`  defaultArgs: ${JSON.stringify(preset.defaultArgs)},`);
-  lines.push(`  forbiddenArgs: ${JSON.stringify(preset.forbiddenArgs)},`);
+  if (hasOverrides && overrides[profile.tool_id]?.forbiddenArgs?.length) {
+    lines.push(`  forbiddenArgs: [`);
+    for (const entry of overrides[profile.tool_id].forbiddenArgs!) {
+      lines.push(`    ${JSON.stringify(entry.flag)},  // ${entry.reason}`);
+    }
+    lines.push(`  ],`);
+  } else {
+    lines.push(`  forbiddenArgs: ${JSON.stringify(preset.forbiddenArgs)},`);
+  }
   lines.push(`  healthcheckArgs: ${JSON.stringify(preset.healthcheckArgs)},`);
   lines.push(`  healthcheckTimeoutMs: ${preset.healthcheckTimeoutMs},`);
   lines.push(`  stdinIgnore: ${preset.stdinIgnore},`);
@@ -156,7 +262,17 @@ export function generateAdapterTypeScript(profile: ToolProfile): string {
   if (preset.sessionContinueFlag) {
     lines.push(`  sessionContinueFlag: ${JSON.stringify(preset.sessionContinueFlag)},`);
   }
-  lines.push(`  noisePatterns: [${preset.noisePatterns.map(p => JSON.stringify(p)).join(", ")}],`);
+  // noisePatterns as RegExp[]
+  if (preset.noisePatterns.length > 0) {
+    lines.push(`  noisePatterns: [`);
+    for (const p of preset.noisePatterns) {
+      const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      lines.push(`    /${escaped}/,`);
+    }
+    lines.push(`  ],`);
+  } else {
+    lines.push(`  noisePatterns: [],`);
+  }
   lines.push(`  needsLineBuffering: ${preset.needsLineBuffering},`);
   if (preset.maxTurns !== undefined) {
     lines.push(`  maxTurns: ${preset.maxTurns},`);
@@ -187,7 +303,7 @@ export function generateAdapterTypeScript(profile: ToolProfile): string {
 /**
  * Generate JSON representation of the adapter preset.
  */
-export function generateAdapterJSON(profile: ToolProfile): string {
-  const preset = profileToAdapterPreset(profile);
+export function generateAdapterJSON(profile: ToolProfile, useOverrides = true): string {
+  const preset = profileToAdapterPreset(profile, useOverrides);
   return JSON.stringify(preset, null, 2);
 }

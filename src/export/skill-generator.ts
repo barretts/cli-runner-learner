@@ -6,12 +6,14 @@
  */
 
 import type { ToolProfile, StateDefinition, StateTransition } from "../types.js";
+import { loadAdapterOverrides, type AdapterOverride } from "./adapter-generator.js";
 
-export function generateSkillMarkdown(profile: ToolProfile): string {
+export function generateSkillMarkdown(profile: ToolProfile, useOverrides = true): string {
   const tool = profile.tool_id;
   const cmd = profile.tool_command;
   const desc = profile.discovery?.parsed_description ?? `CLI tool: ${tool}`;
   const lines: string[] = [];
+  const ov: AdapterOverride | undefined = useOverrides ? loadAdapterOverrides()[tool] : undefined;
 
   // --- Frontmatter ---
   lines.push("---");
@@ -27,7 +29,7 @@ export function generateSkillMarkdown(profile: ToolProfile): string {
   lines.push(desc);
   lines.push("");
 
-  // --- Launch ---
+  // --- Launch (interactive) ---
   lines.push("## Launch");
   lines.push("");
   lines.push("```bash");
@@ -46,6 +48,30 @@ export function generateSkillMarkdown(profile: ToolProfile): string {
     lines.push(`- **Reduce-motion env**: ${Object.entries(profile.reduce_motion_env).map(([k, v]) => `\`${k}=${v}\``).join(", ")}`);
   }
   lines.push("");
+
+  // --- Batch Invocation (from overrides) ---
+  if (ov?.defaultArgs && ov.defaultArgs.length > 0) {
+    lines.push("## Batch / Non-Interactive Invocation");
+    lines.push("");
+    lines.push("For automated / orchestrator use:");
+    lines.push("");
+    lines.push("```bash");
+    const batchArgs = [...ov.defaultArgs];
+    if (ov.promptDelivery === "positional-arg") {
+      lines.push(`${cmd} ${batchArgs.join(" ")} "<prompt>"`);
+    } else if (ov.promptDelivery === "flag" && ov.promptFlag) {
+      lines.push(`${cmd} ${batchArgs.join(" ")} ${ov.promptFlag} "<prompt>"`);
+    } else {
+      lines.push(`echo "<prompt>" | ${cmd} ${batchArgs.join(" ")}`);
+    }
+    lines.push("```");
+    lines.push("");
+    lines.push(`- **Prompt delivery**: ${ov.promptDelivery ?? "stdin"}`);
+    if (ov.stdinIgnore) {
+      lines.push("- **stdin**: must be set to \"ignore\" (tool does NOT read prompts from stdin pipe)");
+    }
+    lines.push("");
+  }
 
   // --- State Machine ---
   lines.push("## State Machine");
@@ -160,6 +186,30 @@ export function generateSkillMarkdown(profile: ToolProfile): string {
     lines.push("");
   }
 
+  // --- Forbidden Flags (from overrides) ---
+  if (ov?.forbiddenArgs && ov.forbiddenArgs.length > 0) {
+    lines.push("## Forbidden Flags");
+    lines.push("");
+    lines.push("These flags cause failures when used in batch/automated mode:");
+    lines.push("");
+    for (const entry of ov.forbiddenArgs) {
+      lines.push(`- \`${entry.flag}\` — ${entry.reason}`);
+    }
+    lines.push("");
+  }
+
+  // --- Noise Patterns (from overrides) ---
+  if (ov?.noisePatterns && ov.noisePatterns.length > 0) {
+    lines.push("## Stderr Noise Patterns");
+    lines.push("");
+    lines.push("These stderr lines are non-actionable and should be filtered from terminal output:");
+    lines.push("");
+    for (const p of ov.noisePatterns) {
+      lines.push(`- \`${p}\``);
+    }
+    lines.push("");
+  }
+
   // --- Learned Patterns ---
   const patterns = profile.learned_patterns.filter(p => p.confidence >= 0.5);
   if (patterns.length > 0) {
@@ -180,6 +230,16 @@ export function generateSkillMarkdown(profile: ToolProfile): string {
       }
       lines.push("");
     }
+  }
+
+  // --- Operational Notes (from overrides) ---
+  if (ov?.notes && ov.notes.length > 0) {
+    lines.push("## Operational Notes");
+    lines.push("");
+    for (const note of ov.notes) {
+      lines.push(`- ${note}`);
+    }
+    lines.push("");
   }
 
   // --- Metadata ---
