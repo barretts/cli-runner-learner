@@ -1,78 +1,215 @@
 {
   "schema_version": "1.0",
-  "session_id": "gemini-learn-1776287672971",
+  "session_id": "gemini-learn-1776341717260",
   "tool_id": "gemini",
-  "tool_command": "/Users/bsonntag/.nvm/versions/node/v20.19.6/bin/gemini",
-  "started_at": "2026-04-15T21:14:32.971Z",
-  "updated_at": "2026-04-15T21:19:24.879Z",
+  "tool_command": "gemini",
+  "started_at": "2026-04-16T12:15:17.260Z",
+  "updated_at": "2026-04-16T12:22:17.559Z",
   "status": "COMPLETED",
-  "current_round": 5,
-  "max_rounds": 8,
+  "current_round": 16,
+  "max_rounds": 16,
   "confidence_threshold": 0.8,
   "confidence_history": [
-    0.44523809523809516,
-    0.44523809523809516,
-    0.5019841269841269,
-    0.5069444444444444,
-    0.5118055555555555
+    0.7430555555555555,
+    0.7225198412698413,
+    0.7225198412698413,
+    0.7225198412698413,
+    0.7086967120181404,
+    0.6997824263038549,
+    0.6730867857142856,
+    0.6531188707482992,
+    0.6371907019652304,
+    0.629403814504913,
+    0.628170998451522,
+    0.6273113448846802,
+    0.6265567915533087,
+    0.6257343421546365,
+    0.6256242688945634,
+    0.6253510633737476
   ],
   "completed_probes": [
     {
       "round": 0,
-      "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-0-1776287681312.jsonl",
+      "strategy": "explore",
+      "input_text": "/help",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-0-1776341724962.jsonl",
       "states_observed": [
         "startup",
-        "prompting",
-        "prompting",
-        "prompting"
+        "startup",
+        "ready",
+        "unknown",
+        "completed"
       ]
     },
     {
       "round": 1,
-      "strategy": "input",
-      "input_text": "What is 2+2?",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-1-1776287764638.jsonl",
+      "strategy": "multi_turn",
+      "input_text": "Explain the difference between a promise and an observable in JavaScript in detail",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-1-1776341783458.jsonl",
       "states_observed": [
         "startup",
-        "prompting",
-        "prompting",
-        "prompting",
-        "prompting",
-        "prompting"
+        "ready",
+        "unknown",
+        "unknown",
+        "completed"
       ]
     },
     {
       "round": 2,
-      "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-2-1776287885581.jsonl",
+      "strategy": "input",
+      "input_text": "Write a Python function to find all prime numbers up to N using the Sieve of Eratosthenes, then analyze its time and space complexity step by step.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-2-1776341846560.jsonl",
       "states_observed": [
         "startup",
-        "startup",
         "ready",
-        "startup"
+        "unknown",
+        "unknown",
+        "completed"
       ]
     },
     {
       "round": 3,
-      "strategy": "input",
-      "input_text": "Write a haiku about the ocean and explain the syllable count for each line.",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-3-1776287909864.jsonl",
+      "strategy": "observe",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-3-1776341910768.jsonl",
       "states_observed": [
         "startup",
-        "startup",
-        "startup",
         "ready",
-        "startup"
+        "unknown",
+        "completed"
       ]
     },
     {
       "round": 4,
-      "strategy": "observe",
-      "transcript_path": "/Users/ephem/lcode/cli-runner-learner/transcripts/gemini-probe-4-1776287954212.jsonl",
+      "strategy": "input",
+      "input_text": "Prove that the square root of 2 is irrational using three different proof techniques, showing all steps.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-4-1776341936998.jsonl",
       "states_observed": [
-        "startup",
-        "startup"
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 5,
+      "strategy": "input",
+      "input_text": "List every prime number between 1 and 10000, one per line, no abbreviation, no ellipsis.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-5-1776341956880.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 6,
+      "strategy": "multi_turn",
+      "input_text": "Step by step, without skipping any steps, solve this integral: the integral from 0 to infinity of x^3 divided by (e^x minus 1) dx, showing every substitution, every series expansion, and every convergence argument.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-6-1776341973909.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "prompting",
+        "completed"
+      ]
+    },
+    {
+      "round": 7,
+      "strategy": "input",
+      "input_text": "What is 2+2?",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-7-1776341994412.jsonl",
+      "states_observed": [
+        "ready",
+        "prompting",
+        "completed"
+      ]
+    },
+    {
+      "round": 8,
+      "strategy": "input",
+      "input_text": "What is the capital of France?",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-8-1776342012343.jsonl",
+      "states_observed": [
+        "ready",
+        "prompting",
+        "completed"
+      ]
+    },
+    {
+      "round": 9,
+      "strategy": "input",
+      "input_text": "Think step by step before answering: A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? Show your full reasoning chain before giving the final answer.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-9-1776342031564.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 10,
+      "strategy": "input",
+      "input_text": "Before you write a single word of your answer, think silently about all the edge cases for 60 seconds. Then answer: what is the output of this Python code: `print(0.1 + 0.2 == 0.3)`",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-10-1776342054834.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 11,
+      "strategy": "input",
+      "input_text": "Think deeply and carefully, taking as much time as you need, before responding: What is the 10,000th prime number? Show your full internal reasoning process as you work through it.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-11-1776342066991.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 12,
+      "strategy": "input",
+      "input_text": "Before writing anything, reason internally for as long as needed: enumerate all integer solutions to x^2 + y^2 = z^2 where x, y, z are each less than 100, then explain the pattern you observe in the solutions.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-12-1776342083772.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 13,
+      "strategy": "input",
+      "input_text": "Before responding, take a moment to think: what is the next number in this sequence: 1, 1, 2, 3, 5, 8, 13? Just give the number, nothing else.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-13-1776342103183.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 14,
+      "strategy": "input",
+      "input_text": "Using only first principles, derive the formula for the sum of the first N natural numbers. Show each logical step as a numbered thought before concluding.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-14-1776342115854.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "completed"
+      ]
+    },
+    {
+      "round": 15,
+      "strategy": "multi_turn",
+      "input_text": "You are now going to think out loud, step by step, before giving any answer. First, spend time reasoning through this problem before writing your conclusion: Given a sorted array of integers, describe every algorithmic approach you know for searching it, compare their time and space complexities, and then recommend one — but only after you have finished all your internal reasoning.",
+      "transcript_path": "/home/barrett/code/cli-runner-learner/transcripts/gemini-probe-15-1776342131726.jsonl",
+      "states_observed": [
+        "ready",
+        "working",
+        "prompting",
+        "completed"
       ]
     }
   ],
@@ -80,35 +217,54 @@
     {
       "round": 1,
       "failure_signatures": [
-        "state_gap:startup has zero learned patterns",
-        "state_gap:ready has zero learned patterns",
-        "state_gap:thinking has zero learned patterns"
+        "state_gap:thinking has zero learned patterns",
+        "classification_ambiguous:3 segments below 0.3 confidence"
       ],
       "decision": "RETRY",
-      "patches_applied": 7,
-      "timestamp": "2026-04-15T21:18:05.580Z"
+      "patches_applied": 4,
+      "timestamp": "2026-04-16T12:17:26.558Z"
+    },
+    {
+      "round": 2,
+      "failure_signatures": [
+        "state_gap:thinking has zero learned patterns",
+        "classification_ambiguous:5 segments below 0.3 confidence"
+      ],
+      "decision": "RETRY",
+      "patches_applied": 4,
+      "timestamp": "2026-04-16T12:18:30.766Z"
     },
     {
       "round": 3,
       "failure_signatures": [
-        "state_gap:ready has zero learned patterns",
-        "state_gap:thinking has zero learned patterns"
+        "state_gap:thinking has zero learned patterns",
+        "classification_ambiguous:6 segments below 0.3 confidence"
       ],
       "decision": "RETRY",
-      "patches_applied": 9,
-      "timestamp": "2026-04-15T21:19:14.211Z"
+      "patches_applied": 5,
+      "timestamp": "2026-04-16T12:18:56.996Z"
+    },
+    {
+      "round": 4,
+      "failure_signatures": [
+        "state_gap:thinking has zero learned patterns",
+        "classification_ambiguous:6 segments below 0.3 confidence"
+      ],
+      "decision": "RETRY",
+      "patches_applied": 5,
+      "timestamp": "2026-04-16T12:19:16.878Z"
     }
   ],
   "failure_signatures_seen": [
-    "state_gap:startup has zero learned patterns",
-    "state_gap:ready has zero learned patterns",
-    "state_gap:thinking has zero learned patterns"
+    "state_gap:thinking has zero learned patterns",
+    "classification_ambiguous:3 segments below 0.3 confidence",
+    "classification_ambiguous:5 segments below 0.3 confidence",
+    "classification_ambiguous:6 segments below 0.3 confidence"
   ],
   "config": {
-    "settle_timeout_ms": 5000,
-    "max_probe_session_ms": 30000,
+    "settle_timeout_ms": 200,
+    "max_probe_session_ms": 45000,
     "heal_mode": "auto",
     "max_heal_rounds": 4
-  },
-  "abort_reason": "Non-convergent: same failure signatures after healing"
+  }
 }

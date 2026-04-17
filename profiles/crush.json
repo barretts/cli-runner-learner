@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0",
   "tool_id": "crush",
-  "tool_command": "/opt/homebrew/bin/crush",
-  "last_updated": "2026-04-15T21:21:53.078Z",
-  "confidence": 0.37142857142857144,
-  "probe_count": 6,
+  "tool_command": "crush",
+  "last_updated": "2026-04-16T12:08:19.499Z",
+  "confidence": 0.8194642857142856,
+  "probe_count": 2,
   "needs_review": false,
   "interaction_mode": "interactive",
   "launch": {
@@ -19,31 +19,107 @@
       "indicators": [
         {
           "type": "output_glob",
-          "pattern": "[?2026$p[?2027$p [?1004$pi=31,s=1,v=1,a=q,t=d,f=24;AAAA"
+          "pattern": "Charm™*"
         },
         {
           "type": "output_glob",
-          "pattern": "[?1004$pi=31,s=1,v=1,a=q,t=d,f=24;AAAA [=0;1u [=1;1u"
+          "pattern": "~*"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "◇ OpenAI: gpt-oss-120b (free) via OpenRouter"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "Reasoning Medium"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "LSPsMCPs"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "NoneNone >"
         }
       ],
       "timeout_sec": 30
     },
     "ready": {
-      "description": "Tool is waiting for input",
-      "indicators": []
+      "description": "Ready: A terminal-first AI assistant for software development tasks with interactive and non-interactive modes.",
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "Reasoning Medium"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "LSPsMCPs"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "NoneNone > Ready for instructions"
+        },
+        {
+          "type": "silence_after_output_ms",
+          "value": 5000
+        },
+        {
+          "type": "output_glob",
+          "pattern": "NoneNone >"
+        }
+      ]
     },
     "working": {
       "description": "Tool is actively processing",
-      "indicators": []
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "esc cancel •"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "cancel • tab"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "tab focus chat"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "focus chat •"
+        }
+      ]
     },
     "prompting": {
       "description": "Tool wants user input",
-      "indicators": [],
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "Are you sure you want to quit? Yep! Nope"
+        }
+      ],
       "sub_prompts": []
     },
     "thinking": {
       "description": "Tool is processing/reasoning",
-      "indicators": []
+      "indicators": [
+        {
+          "type": "output_glob",
+          "pattern": "esc cancel •"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "cancel • tab"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "tab focus chat"
+        },
+        {
+          "type": "output_glob",
+          "pattern": "focus chat •"
+        }
+      ]
     },
     "completed": {
       "description": "Tool finished",
@@ -121,24 +197,242 @@
   },
   "learned_patterns": [
     {
-      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-0-1776279841097.jsonl",
-      "timestamp": "2026-04-15T21:21:53.075Z",
-      "pattern": "[?2026$p[?2027$p [?1004$pi=31,s=1,v=1,a=q,t=d,f=24;AAAA",
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "Charm™*",
       "classified_as": "startup",
-      "occurrences": 12,
+      "occurrences": 3,
       "confidence": 1
     },
     {
-      "source_transcript": "/Users/ephem/lcode/cli-runner-learner/transcripts/crush-probe-0-1776279841097.jsonl",
-      "timestamp": "2026-04-15T21:21:53.075Z",
-      "pattern": "[?1004$pi=31,s=1,v=1,a=q,t=d,f=24;AAAA [=0;1u [=1;1u",
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:07:31.902Z",
+      "pattern": "~*",
       "classified_as": "startup",
-      "occurrences": 12,
+      "occurrences": 1,
       "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "◇ OpenAI: gpt-oss-120b (free) via OpenRouter",
+      "classified_as": "startup",
+      "occurrences": 3,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "Are you sure you want to quit? Yep! Nope",
+      "classified_as": "prompting",
+      "occurrences": 3,
+      "confidence": 1
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "Reasoning Medium",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.7749999999999998
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "LSPsMCPs",
+      "classified_as": "ready",
+      "occurrences": 3,
+      "confidence": 0.7749999999999998
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "NoneNone > Ready for instructions",
+      "classified_as": "ready",
+      "occurrences": 2,
+      "confidence": 0.6699999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "Reasoning Medium",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.7749999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "LSPsMCPs",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.7749999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "NoneNone >",
+      "classified_as": "startup",
+      "occurrences": 2,
+      "confidence": 0.7749999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-0-1776341240784.jsonl",
+      "timestamp": "2026-04-16T12:08:19.492Z",
+      "pattern": "NoneNone >",
+      "classified_as": "ready",
+      "occurrences": 2,
+      "confidence": 0.7749999999999999
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.493Z",
+      "pattern": "esc cancel •",
+      "classified_as": "thinking",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.493Z",
+      "pattern": "cancel • tab",
+      "classified_as": "thinking",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.493Z",
+      "pattern": "tab focus chat",
+      "classified_as": "thinking",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.493Z",
+      "pattern": "focus chat •",
+      "classified_as": "thinking",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.494Z",
+      "pattern": "esc cancel •",
+      "classified_as": "working",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.494Z",
+      "pattern": "cancel • tab",
+      "classified_as": "working",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.494Z",
+      "pattern": "tab focus chat",
+      "classified_as": "working",
+      "occurrences": 2,
+      "confidence": 0.75
+    },
+    {
+      "source_transcript": "/home/barrett/code/cli-runner-learner/transcripts/crush-probe-1-1776341262705.jsonl",
+      "timestamp": "2026-04-16T12:08:19.494Z",
+      "pattern": "focus chat •",
+      "classified_as": "working",
+      "occurrences": 2,
+      "confidence": 0.75
     }
   ],
+  "discovery": {
+    "help_text": "A glamorous, terminal-first AI assistant for software development and adjacent tasksUSAGE\ncrush ommand] [--flags]\nEXAMPLES# Run in interactive ode\ncrush\n# Run non-interactively\ncrush run \"Guess y 5 favorite Pokémon\"\n# Run a non-interactively with pipes and redirection\ncat README.md | crush run \"make this ore glamorous\" > GLAMOROUS_README.md\n# Run with debug logging in a specific directory\ncrush --debug --cwd /path/to/project\n# Run in yolo ode (auto-accept all permissions; use with care)\ncrush --yolo\n# Run with custom data directory\ncrush --data-dir /path/to/custom/.crush\n# Continue a previous session\ncrush --session {session-id}\n# Continue the ost recent session\ncrush --continue\nCOMMANDS\ncompletion ommand] Generate the autocompletion script for the specified shell\ndirs ommand] Print directories used by Crush\nhelp ommand] Help about any command\nlogin latform] Login Crush to a platform\nlogs [--flags] View crush logs\nodels List all available odels from configured providers\nprojects [--flags] List project directoriesrun rompt...] [--flags] Run a single non-interactive prompt\nserver [--flags] Start the Crush server\nsession ommand] Manage sessions\nstats Show usage statistics\nupdate-providers ath-or-url] [--flags] Update providers\nFLAGS\n-C --continue Continue the ost recent session\n-c --cwd Current working directory\n-D --data-dir Custom crush data directory\n-d --debug Debug\n-h --help Help\n-H --host Connect to a specific crush server host (for advanced users) (unix:///tmp/crush-1000.sock)\n-s --session Continue a previous session by ID\n-v --version Version for crush\n-y --yolo Automatically accept all permissions (dangerous ode)",
+    "parsed_description": "A terminal-first AI assistant for software development tasks with interactive and non-interactive modes.",
+    "subcommands": [
+      {
+        "name": "completion",
+        "description": "Generate the autocompletion script for the specified shell",
+        "flags": []
+      },
+      {
+        "name": "dirs",
+        "description": "Print directories used by Crush",
+        "flags": []
+      },
+      {
+        "name": "help",
+        "description": "Help about any command",
+        "flags": []
+      },
+      {
+        "name": "login",
+        "description": "Login Crush to a platform",
+        "flags": []
+      },
+      {
+        "name": "logs",
+        "description": "View crush logs",
+        "flags": []
+      },
+      {
+        "name": "models",
+        "description": "List all available models from configured providers",
+        "flags": []
+      },
+      {
+        "name": "projects",
+        "description": "List project directories",
+        "flags": []
+      },
+      {
+        "name": "run",
+        "description": "Run a single non-interactive prompt",
+        "flags": []
+      },
+      {
+        "name": "server",
+        "description": "Start the Crush server",
+        "flags": []
+      },
+      {
+        "name": "session",
+        "description": "Manage sessions",
+        "flags": []
+      },
+      {
+        "name": "stats",
+        "description": "Show usage statistics",
+        "flags": []
+      },
+      {
+        "name": "update-providers",
+        "description": "Update providers",
+        "flags": []
+      }
+    ],
+    "common_flags": [
+      "--continue",
+      "--cwd",
+      "--data-dir",
+      "--debug",
+      "--help",
+      "--host",
+      "--session",
+      "--version",
+      "--yolo"
+    ],
+    "interactive": true,
+    "discovered_at": "2026-04-16T12:07:13.780Z"
+  },
+  "reduce_motion_env": {
+    "CRUSH_REDUCE_ANIMATIONS": "1"
+  },
   "metadata": {
-    "terminal_cols": 80,
-    "terminal_rows": 24
+    "terminal_cols": 120,
+    "terminal_rows": 51
   }
 }

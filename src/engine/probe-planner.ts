@@ -10,7 +10,10 @@ export interface PlannedProbe {
   expected_outcome?: string;
 }
 
-const FALLBACK_CYCLE: ProbeStrategy[] = ["observe", "enter", "input", "prompt_response"];
+const FALLBACK_CYCLE: ProbeStrategy[] = [
+  "observe", "enter", "input", "shortcut", "prompt_response",
+  "explore", "multi_turn", "ctrl_c",
+];
 
 /**
  * Plan the next probe round. With an LLM, adapts based on profile state
@@ -22,11 +25,17 @@ export async function planNextProbe(
   llmClient: LLMClient | null,
   healerSuggestion?: PlannedProbe,
 ): Promise<PlannedProbe> {
-  if (healerSuggestion) return healerSuggestion;
+  console.log(`[planner] Planning next probe. Completed: ${completedProbes.length}, healer suggestion: ${healerSuggestion ? healerSuggestion.strategy : 'none'}`);
+
+  if (healerSuggestion) {
+    console.log(`[planner] Using healer suggestion: ${healerSuggestion.strategy}${healerSuggestion.input_text ? ` "${healerSuggestion.input_text}"` : ''} -- ${healerSuggestion.rationale}`);
+    return healerSuggestion;
+  }
   // Without LLM or if budget exhausted, use deterministic cycle
   if (!llmClient || llmClient.exhausted) {
     const idx = completedProbes.length % FALLBACK_CYCLE.length;
     const strategy = FALLBACK_CYCLE[idx];
+    console.log(`[planner] LLM ${!llmClient ? 'unavailable' : 'exhausted'} -- fallback cycle idx=${idx}: ${strategy}`);
     return {
       strategy,
       input_text: strategy === "input" ? "hello" : undefined,
@@ -43,13 +52,30 @@ export async function planNextProbe(
     rationale: p.rationale,
   }));
 
+  console.log(`[planner] Asking LLM with ${history.length} probe history entries`);
+  for (const h of history) {
+    console.log(`[planner]   Round ${h.round}: ${h.strategy}${h.input_text ? ` "${h.input_text}"` : ''} -> states=[${h.states_observed.join(', ')}]`);
+  }
+
+  // Log profile state coverage for context
+  const patternStates = ["startup", "ready", "working", "thinking", "prompting"];
+  for (const s of patternStates) {
+    const count = profile.learned_patterns.filter(p => p.classified_as === s).length;
+    const indicators = profile.states[s]?.indicators.length ?? 0;
+    console.log(`[planner]   Profile ${s}: ${count} patterns, ${indicators} indicators`);
+  }
+
   try {
     const prompt = buildProbeStrategyPrompt(profile, history);
+    console.log(`[planner] LLM prompt lengths: system=${prompt.system.length}, user=${prompt.user.length}`);
     const raw = await llmClient.complete(prompt.system, prompt.user);
+    console.log(`[planner] LLM response: ${raw.length} chars`);
+    console.log(`[planner] LLM raw (first 300): ${raw.substring(0, 300).replace(/\n/g, '\\n')}`);
     const parsed = parseProbeStrategy(raw);
 
     if (parsed) {
       const strategy = normalizeStrategy(parsed.strategy);
+      console.log(`[planner] LLM chose: ${strategy}${parsed.input_text ? ` "${parsed.input_text}"` : ''} -- ${parsed.rationale}`);
       return {
         strategy,
         input_text: parsed.input_text,
@@ -57,11 +83,13 @@ export async function planNextProbe(
         expected_outcome: parsed.expected_outcome,
       };
     }
-  } catch {
-    // LLM call failed -- fall through to deterministic
+    console.log(`[planner] LLM response could not be parsed -- falling back`);
+  } catch (e) {
+    console.log(`[planner] LLM call failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   const idx = completedProbes.length % FALLBACK_CYCLE.length;
+  console.log(`[planner] Fallback after LLM failure: idx=${idx} -> ${FALLBACK_CYCLE[idx]}`);
   return {
     strategy: FALLBACK_CYCLE[idx],
     input_text: FALLBACK_CYCLE[idx] === "input" ? "hello" : undefined,
@@ -74,7 +102,12 @@ function normalizeStrategy(raw: string): ProbeStrategy {
   if (lower === "observe") return "observe";
   if (lower === "enter") return "enter";
   if (lower === "input") return "input";
-  if (lower === "ctrlc" || lower === "promptresponse") return "prompt_response";
+  if (lower === "promptresponse") return "prompt_response";
   if (lower === "custom") return "custom";
+  if (lower === "shortcut") return "shortcut";
+  if (lower === "multiturn") return "multi_turn";
+  if (lower === "permissionflow") return "permission_flow";
+  if (lower === "explore") return "explore";
+  if (lower === "ctrlc") return "ctrl_c";
   return "observe";
 }

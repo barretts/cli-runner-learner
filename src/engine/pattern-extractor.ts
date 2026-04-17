@@ -21,15 +21,22 @@ export function extractPatterns(
     segments: ClassifiedSegment[];
   }>,
 ): LearnedPattern[] {
+  console.log(`[extract] Extracting patterns from ${classifiedRuns.length} runs`);
+
   // Phase 1: collect all fragments with their state associations
   const candidates = new Map<string, PatternCandidate>();
+  let totalFragments = 0;
+  let skippedUnknown = 0;
+  let skippedLowConf = 0;
 
   for (const run of classifiedRuns) {
+    let runFragments = 0;
     for (const seg of run.segments) {
-      if (seg.state === "unknown" || seg.state === "completed") continue;
-      if (seg.confidence < 0.4) continue;
+      if (seg.state === "unknown" || seg.state === "completed") { skippedUnknown++; continue; }
+      if (seg.confidence < 0.4) { skippedLowConf++; continue; }
 
       const fragments = extractFragments(seg.stripped_text);
+      runFragments += fragments.length;
 
       for (const frag of fragments) {
         const key = `${seg.state}::${frag}`;
@@ -59,14 +66,27 @@ export function extractPatterns(
         }
       }
     }
+    totalFragments += runFragments;
+    console.log(`[extract]   Run ${run.transcript_path.split('/').pop()}: ${runFragments} fragments from ${run.segments.length} segments`);
   }
+  console.log(`[extract] Phase 1: ${candidates.size} unique candidates from ${totalFragments} total fragments (skipped: ${skippedUnknown} unknown/completed, ${skippedLowConf} low-conf)`);
 
   // Phase 2: Score candidates
   const totalRuns = classifiedRuns.length;
   const results: LearnedPattern[] = [];
+  let belowThreshold = 0;
+  let tooShort = 0;
+  let rejectedEntropy = 0;
+  let rejectedChrome = 0;
 
   for (const candidate of candidates.values()) {
-    if (candidate.pattern.length < 5) continue;
+    if (candidate.pattern.length < 5) { tooShort++; continue; }
+
+    // Hard-reject: high-entropy fragments (random animation text)
+    if (looksRandom(candidate.pattern)) { rejectedEntropy++; continue; }
+
+    // Hard-reject: patterns in 3+ states are persistent TUI chrome (status bar, shortcuts)
+    if (candidate.all_states.size >= 3) { rejectedChrome++; continue; }
 
     // Run coverage: fraction of runs containing this pattern
     const runCoverage = candidate.source_transcripts.size / totalRuns;
@@ -74,8 +94,14 @@ export function extractPatterns(
     // Frequency score
     const freqScore = Math.min(candidate.occurrences / totalRuns, 1);
 
-    // Uniqueness: penalize patterns that appear in multiple states
-    const uniqueness = 1 / candidate.all_states.size;
+    // Uniqueness: penalize patterns appearing in multiple states (1/N² instead of 1/N).
+    // Exception: working↔thinking are treated as a single group since TUI tools
+    // re-render the full screen during both states (same chrome, same content).
+    const effectiveStates = new Set(candidate.all_states);
+    if (effectiveStates.has("working") && effectiveStates.has("thinking") && effectiveStates.size === 2) {
+      effectiveStates.delete("thinking"); // collapse to single group
+    }
+    const uniqueness = 1 / (effectiveStates.size * effectiveStates.size);
 
     candidate.confidence = (runCoverage * 0.5 + freqScore * 0.2 + uniqueness * 0.3);
 
@@ -89,15 +115,33 @@ export function extractPatterns(
         occurrences: candidate.occurrences,
         confidence: candidate.confidence,
       });
+    } else {
+      belowThreshold++;
     }
   }
+
+  console.log(`[extract] Phase 2: ${results.length} patterns above threshold, ${belowThreshold} below 0.35, ${tooShort} too short, ${rejectedEntropy} random, ${rejectedChrome} chrome`);
 
   results.sort((a, b) => b.confidence - a.confidence || b.occurrences - a.occurrences);
 
   // Limit to top patterns per state (avoid noise)
   const perState = limitPerState(results, 5);
+  console.log(`[extract] After per-state limit (5): ${perState.length} patterns`);
 
-  return deduplicatePatterns(perState);
+  const final = deduplicatePatterns(perState);
+  console.log(`[extract] After dedup: ${final.length} patterns`);
+
+  // Log per-state breakdown
+  const stateBreakdown: Record<string, number> = {};
+  for (const p of final) {
+    stateBreakdown[p.classified_as] = (stateBreakdown[p.classified_as] ?? 0) + 1;
+  }
+  console.log(`[extract] Per-state: ${Object.entries(stateBreakdown).map(([s, c]) => `${s}:${c}`).join(', ')}`);
+  for (const p of final) {
+    console.log(`[extract]   [${p.classified_as}] "${p.pattern}" conf=${(p.confidence*100).toFixed(0)}% occ=${p.occurrences}`);
+  }
+
+  return final;
 }
 
 /**
@@ -129,6 +173,27 @@ function extractFragments(text: string): string[] {
   }
 
   return [...fragments];
+}
+
+/**
+ * Detect random/scrambled text (e.g. animation frames) by checking character entropy.
+ * Returns true if the fragment looks random rather than meaningful.
+ */
+function looksRandom(text: string): boolean {
+  if (text.length < 6) return false;
+
+  // High ratio of non-alphanumeric characters (excluding common punctuation)
+  const alnumCount = (text.match(/[a-zA-Z0-9 ]/g) || []).length;
+  const alnumRatio = alnumCount / text.length;
+  if (alnumRatio < 0.4) return true;
+
+  // High unique-character ratio relative to length (scrambled text)
+  const uniqueChars = new Set(text).size;
+  const uniqueRatio = uniqueChars / text.length;
+  // Short fragments with almost all unique chars are likely random
+  if (text.length <= 20 && uniqueRatio > 0.85) return true;
+
+  return false;
 }
 
 /**

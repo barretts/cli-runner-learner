@@ -45,14 +45,22 @@ export function initLearnState(
 
 export async function checkpointLearnState(state: LearnSessionState): Promise<void> {
   state.updated_at = new Date().toISOString();
-  await writeAtomicJson(stateFilePath(state.tool_id), state);
+  const path = stateFilePath(state.tool_id);
+  console.log(`[learn-state] Checkpoint: ${state.session_id} round=${state.current_round} status=${state.status} conf=[${state.confidence_history.map(c => (c*100).toFixed(1)+'%').join(',')}]`);
+  console.log(`[learn-state]   Path: ${path}`);
+  await writeAtomicJson(path, state);
 }
 
 export async function loadLearnState(toolId: string): Promise<LearnSessionState | null> {
+  const path = stateFilePath(toolId);
+  console.log(`[learn-state] Loading: ${path}`);
   try {
-    const raw = await readFile(stateFilePath(toolId), "utf-8");
-    return JSON.parse(raw) as LearnSessionState;
+    const raw = await readFile(path, "utf-8");
+    const state = JSON.parse(raw) as LearnSessionState;
+    console.log(`[learn-state] Loaded: session=${state.session_id}, status=${state.status}, round=${state.current_round}, probes=${state.completed_probes.length}`);
+    return state;
   } catch {
+    console.log(`[learn-state] No existing state for ${toolId}`);
     return null;
   }
 }

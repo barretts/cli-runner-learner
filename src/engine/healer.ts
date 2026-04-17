@@ -57,6 +57,7 @@ export function diagnoseLearnFailures(
   probes: ProbeResult[],
   profile: ToolProfile,
 ): LearnDiagnosis[] {
+  console.log(`[heal-diag] Diagnosing learn failures: ${probes.length} probes, ${profile.learned_patterns.length} patterns`);
   const failures: LearnDiagnosis[] = [];
 
   // States with zero learned patterns
@@ -133,6 +134,10 @@ export function diagnoseLearnFailures(
     });
   }
 
+  console.log(`[heal-diag] Found ${failures.length} failure(s):`);
+  for (const f of failures) {
+    console.log(`[heal-diag]   [${f.failure_class}] ${f.detail} (sig: ${f.signature})`);
+  }
   return failures;
 }
 
@@ -159,18 +164,46 @@ export async function heal(
   ctx: HealerContext,
   llmClient: LLMClient | null,
 ): Promise<LearnHealDecision> {
-  if (llmClient && !llmClient.exhausted) {
-    try {
-      const prompt = buildLearnHealerPrompt(ctx);
-      const raw = await llmClient.complete(prompt.system, prompt.user);
-      const parsed = parseLearnHealDecision(raw);
-      if (parsed) return parsed;
-    } catch {
-      // LLM failed -- fall through to deterministic
-    }
+  console.log(`[heal] Heal invoked. Signatures: ${ctx.failureSignatures.length}, conf history: [${ctx.confidenceHistory.map(c => (c*100).toFixed(1)+'%').join(', ')}]`);
+  console.log(`[heal] Config: settle=${ctx.config.settle_timeout_ms}ms, maxProbe=${ctx.config.max_probe_session_ms}ms`);
+  if (ctx.diagnosticLines) {
+    console.log(`[heal] Diagnostic lines (first 300): ${ctx.diagnosticLines.substring(0, 300).replace(/\n/g, '\\n')}`);
   }
 
-  return deterministicHeal(ctx);
+  if (llmClient && !llmClient.exhausted) {
+    console.log(`[heal] Attempting LLM-based healing...`);
+    try {
+      const prompt = buildLearnHealerPrompt(ctx);
+      console.log(`[heal]   Prompt lengths: system=${prompt.system.length}, user=${prompt.user.length}`);
+      const raw = await llmClient.complete(prompt.system, prompt.user);
+      console.log(`[heal]   LLM response: ${raw.length} chars`);
+      console.log(`[heal]   LLM raw (first 400): ${raw.substring(0, 400).replace(/\n/g, '\\n')}`);
+      const parsed = parseLearnHealDecision(raw);
+      if (parsed) {
+        console.log(`[heal]   LLM decision: ${parsed.decision} (${parsed.failure_class}), ${parsed.patches.length} patches, ${parsed.suggested_probes?.length ?? 0} suggested probes`);
+        console.log(`[heal]   Root cause: ${parsed.root_cause}`);
+        for (const p of parsed.patches) {
+          console.log(`[heal]   Patch: target=${p.target}, op=${p.operation}, content=${p.content.substring(0, 100)}`);
+        }
+        return parsed;
+      }
+      console.log(`[heal]   LLM parse returned null -- falling through to deterministic`);
+    } catch (e) {
+      console.log(`[heal]   LLM heal failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  } else {
+    console.log(`[heal] LLM ${!llmClient ? 'unavailable' : 'exhausted'} -- using deterministic healing`);
+  }
+
+  const result = deterministicHeal(ctx);
+  console.log(`[heal] Deterministic result: ${result.decision} (${result.failure_class}), ${result.patches.length} patches`);
+  console.log(`[heal] Root cause: ${result.root_cause}`);
+  if (result.suggested_probes) {
+    for (const sp of result.suggested_probes) {
+      console.log(`[heal]   Suggested probe: ${sp.strategy}${sp.input_text ? ` "${sp.input_text}"` : ''} -- ${sp.rationale}`);
+    }
+  }
+  return result;
 }
 
 function deterministicHeal(ctx: HealerContext): LearnHealDecision {
@@ -315,6 +348,7 @@ export function applyHealPatches(
   decision: LearnHealDecision,
   originalConfig?: { settle_timeout_ms: number; max_probe_session_ms: number },
 ): { profile: ToolProfile; configOverrides: Record<string, number> } {
+  console.log(`[heal-patch] Applying ${decision.patches.length} patches (original settle=${originalConfig?.settle_timeout_ms}ms, maxProbe=${originalConfig?.max_probe_session_ms}ms)`);
   const updated = structuredClone(profile);
   const configOverrides: Record<string, number> = {};
   let patternsAdded = 0;
