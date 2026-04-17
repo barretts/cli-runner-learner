@@ -1,0 +1,234 @@
+---
+description: "cli-tool-driver skill"
+globs: []
+alwaysApply: false
+---
+
+<!-- managed_by: cli-runner-learner -->
+---
+name: cli-tool-driver
+version: "1.0"
+description: "Drive CLI tools using learned profiles. Covers launching, state detection, prompt handling, and output parsing for any tool learned by cli-runner-learner. Use when the user mentions: drive a tool, run a CLI agent, automate a command, export a skill, export an adapter, learn a tool, or interact with crush/opencode/claude/cursor."
+---
+
+# CLI Tool Driver
+
+Automate CLI tools using profiles learned by cli-runner-learner. Each tool is modeled as a 7-state machine with learned recognition patterns, timing, and prompt handling.
+
+---
+
+## When To Use This Skill
+
+- Automating an interactive CLI tool (crush, opencode, claude, cursor)
+- Running batch prompts against a CLI agent
+- Generating adapter presets for AgentThreader
+- Learning a new tool's behavior automatically
+- Reading a generated per-tool skill to understand how to drive it
+
+---
+
+## The 7-State Model
+
+Every CLI tool learned by cli-runner-learner is modeled as a state machine with these states:
+
+| State | Description | Detection |
+|-------|-------------|-----------|
+| **startup** | Tool is initializing, loading config, connecting to services | First segment before any user input; matched by startup indicators (banners, version strings) |
+| **ready** | Tool is idle and waiting for user input | Silence after output, prompt-like text (e.g. `> Ready...`) |
+| **working** | Tool is actively producing output (streaming response, running commands) | High output rate (>10 chars/sec), continuous text flow |
+| **thinking** | Tool is processing but not yet producing output (spinner, "Working...") | Thinking labels (`Working...`, `Brrrrr...`, `Processing...`), animation frames |
+| **prompting** | Tool is asking the user a question (y/n, confirmation, selection) | Prompt patterns (`Are you sure?`, `(y/n)`, `Press enter to continue`) |
+| **completed** | Tool has finished and exited | Process exit event |
+| **error** | Tool encountered an error | Non-zero exit code, error patterns in output |
+
+### Transitions
+
+The standard transition graph:
+
+```
+startup → ready (tool finished loading)
+startup → prompting (tool asks a question during startup)
+ready → working (user sends input)
+working → thinking (thinking indicator appears)
+thinking → working (response content starts streaming)
+working → prompting (tool asks a question)
+working → ready (response finished, tool idle again)
+working → completed (task done, tool exits)
+* → error (error at any point)
+* → completed (process exit at any point)
+```
+
+### Working ↔ Thinking Overlap
+
+In TUI tools (crush, opencode), the **working** and **thinking** states are often intertwined. The tool re-renders the full screen every frame, so thinking labels like `Working...` persist in the chrome while response content streams below. A single transcript segment may contain both thinking indicators AND working content.
+
+The classifier handles this with **bidirectional splitting**: a `thinking` segment with long duration also emits a parallel `working` tag, and a `working` segment containing thinking labels also emits a parallel `thinking` tag. Pattern extraction sees both tags and pulls state-specific n-grams from each.
+
+---
+
+## Interaction Modes
+
+CLI tools operate in one of two modes, which determines how input is delivered:
+
+### Interactive Mode
+
+The tool launches, shows a prompt, and waits for input. Communication happens via PTY (pseudo-terminal):
+
+- **Launch**: `tool` (no arguments needed)
+- **Input delivery**: Type into the PTY after the `ready` state is detected
+- **Output**: Full-screen TUI re-renders, streaming text, spinner animations
+- **Session lifecycle**: startup → ready → (working/thinking cycle) → ready → ... → completed
+- **Examples**: crush (interactive), opencode
+
+Interactive tools typically need:
+- PTY wrapping (`needs_pty: true`)
+- Settle detection to know when output has stopped
+- Reduce-motion env vars to suppress animations during automated use
+- Keyboard input handling (Tab, Ctrl-C, Esc, arrows)
+
+### Args Mode
+
+The tool takes input as command-line arguments and produces output to stdout:
+
+- **Launch**: `tool run "prompt text"` or `tool --prompt "text"`
+- **Input delivery**: Positional argument, flag, or stdin pipe
+- **Output**: Stdout text, possibly with ANSI formatting
+- **Session lifecycle**: startup → working → completed
+- **Examples**: `claude --print`, `crush run`, `cursor --print`
+
+Args-mode tools are simpler to automate but may hide information (tool calls, thinking) that's visible in interactive mode.
+
+### Prompt Delivery
+
+The adapter preset specifies how to pass the prompt:
+
+| `promptDelivery` | How | Example |
+|-----------------|-----|---------|
+| `stdin` | Pipe to stdin | `echo "prompt" \| claude --print` |
+| `positional-arg` | Last CLI argument | `crush run "prompt"` |
+| `flag` | Named flag | `cursor --prompt "prompt"` |
+
+---
+
+## Prompt Handling
+
+### Sub-Prompts
+
+During operation, CLI tools may ask the user questions that block progress. These are **sub-prompts** — secondary prompts that appear within a session:
+
+- **Permission requests**: "Allow file access? (y/n)"
+- **Confirmation dialogs**: "Are you sure you want to quit? Yep! Nope"
+- **Selection menus**: "Choose a model: [1] GPT-4 [2] Claude"
+- **MCP approvals**: "MCP Server Approval: Allow access?"
+
+Each sub-prompt has:
+- **Indicators**: Output patterns that detect the prompt (e.g., `*Are you sure*`)
+- **Auto-response**: What to send when detected (e.g., `Yep!`, `y`, `enter`)
+- **Type**: `yes_no`, `selection`, `text_input`, `confirmation`, `unknown`
+
+### Sentinel Pattern
+
+For args-mode tools, the **sentinel adapter** injects instructions into the prompt asking the tool to wrap its output in sentinel markers:
+
+```
+<TASK_RESULT>
+{"status": "DONE", "summary": "..."}
+</TASK_RESULT>
+```
+
+This gives structured output extraction even from tools that don't natively support it. The sentinel is appended to the user's prompt, and the parser extracts the JSON from between the markers.
+
+### Auto-Response Strategy
+
+When driving a tool automatically:
+
+1. Monitor output for sub-prompt indicators
+2. When detected, send the configured auto-response
+3. If no auto-response is configured, escalate to the orchestrator
+4. Permission prompts default to "yes" in `--yolo` mode, "no" otherwise
+
+The profile's `states.prompting.sub_prompts` array contains all known sub-prompts for a tool, learned from probing sessions where the tool asked questions.
+
+---
+
+## Learning a New Tool
+
+To learn a new tool's behavior:
+
+```bash
+clr learn --tool <id> --command <binary> --heal auto --rounds 16
+```
+
+This runs a probing cycle that:
+1. Discovers the tool (parses `--help`, detects subcommands, flags, interaction mode)
+2. Runs probe strategies (observe, input, multi_turn, shortcut, ctrl_c, explore)
+3. Classifies transcript segments into the 7 states
+4. Extracts stable patterns from classified data
+5. Heals classification failures with LLM-guided adjustments
+6. Saves a profile to `profiles/<id>.json`
+
+### Healing
+
+When confidence stalls, the healer diagnoses failures:
+- **state_gap**: A state has zero learned patterns → tries different probe strategies
+- **pattern_noise**: Patterns appear in multiple states → adjusts timing, filters chrome
+- **classification_ambiguous**: Low-confidence segments → refines heuristics
+- **probe_timeout**: Tool took too long → adjusts settle timeout
+
+## Exporting Skills
+
+Generate a standalone skill markdown from a learned profile:
+
+```bash
+clr export-skill --tool crush
+# → generated/skills/crush.md
+```
+
+The skill teaches any agent how to drive the tool: launch command, state recognition patterns, transitions, timing, sub-prompts, subcommands, and flags.
+
+## Exporting Adapter Presets
+
+Generate an AgentThreader-compatible adapter preset:
+
+```bash
+clr export-adapter --tool crush
+# → generated/adapters/crush-preset.ts
+
+clr export-adapter --tool crush --format json
+# → generated/adapters/crush-preset.json
+```
+
+The preset maps the learned profile to AgentThreader's `AdapterPreset` interface, providing prompt delivery mode, args, timeout config, error patterns, session management, and operational notes.
+
+## Driving a Learned Tool
+
+Once a profile is learned, drive the tool programmatically:
+
+```bash
+clr drive --tool crush --input "What can you do?"
+```
+
+The driver:
+1. Loads the tool's profile
+2. Spawns the tool in a PTY
+3. Waits for the `ready` state (matches profile indicators)
+4. Sends the input
+5. Monitors state transitions (working → thinking → working → ready)
+6. Handles sub-prompts automatically
+7. Extracts the output when the tool returns to `ready` or `completed`
+
+## Profile Structure
+
+Each learned profile contains:
+
+| Field | Purpose |
+|-------|---------|
+| `tool_id`, `tool_command` | Identity |
+| `interaction_mode` | `interactive` or `args` |
+| `launch` | Args, env, PTY needs, startup timeout |
+| `states` | 7 state definitions with indicators |
+| `transitions` | State graph edges with triggers |
+| `timing` | Startup, idle, max session durations |
+| `learned_patterns` | High-confidence text patterns per state |
+| `discovery` | Help text, subcommands, flags |
+| `reduce_motion_env` | Env vars to suppress animations |
