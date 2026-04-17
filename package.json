@@ -1,6 +1,6 @@
 {
   "name": "cli-runner-learner",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Learn CLI tool behavior via PTY probing, then export skills and adapter presets for agentic automation",
   "type": "module",
   "main": "./dist/index.js",
