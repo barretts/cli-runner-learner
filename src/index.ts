@@ -13,8 +13,9 @@ export {
   profileToAdapterPreset,
   generateAdapterTypeScript,
   generateAdapterJSON,
+  loadAdapterOverrides,
 } from "./export/adapter-generator.js";
-export type { GeneratedAdapterPreset } from "./export/adapter-generator.js";
+export type { GeneratedAdapterPreset, AdapterOverride, ForbiddenArgEntry } from "./export/adapter-generator.js";
 export type {
   ToolProfile,
   ToolState,
