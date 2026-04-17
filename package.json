@@ -30,6 +30,7 @@
     "compiled",
     "skill",
     "profiles",
+    "adapter-overrides.json",
     "README.md",
     "install-local.sh"
   ],

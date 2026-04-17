@@ -1,6 +1,6 @@
 # cli-runner-learner (`clr`)
 
-Autonomous learning system and orchestrator for interactive CLI tools. Spawns processes in a real PTY, records terminal I/O, classifies output into behavioral states, extracts patterns, and builds profiles that drive future interactions -- without hardcoded tool-specific logic. Orchestrates multiple LLM CLI tools (claude, gemini, opencode, crush, agent) through a manifest-driven task runner with adaptive healing.
+Learn CLI tool behavior via PTY probing, then export skills and adapter presets for agentic automation. Spawns processes in a real PTY (via `node-pty`), records terminal I/O, classifies output into behavioral states, extracts patterns, and builds profiles that drive future interactions -- without hardcoded tool-specific logic. Exports learned knowledge as portable **skills** (markdown) and **adapter presets** (TypeScript/JSON) for use by any agent or orchestrator.
 
 ## How It Works
 
@@ -9,11 +9,12 @@ Autonomous learning system and orchestrator for interactive CLI tools. Spawns pr
 The system follows a **forced learning cycle** to build a behavioral profile for any CLI tool:
 
 1. **Discover** -- Run the tool with `--help` and parse its capabilities (subcommands, flags, interactivity).
-2. **Probe** -- Launch the tool in a PTY, apply probe strategies (observe, send input, send ctrl-c), and record everything.
+2. **Probe** -- Launch the tool in a PTY, apply probe strategies (observe, input, multi_turn, shortcut, ctrl_c, explore), and record everything.
 3. **Classify** -- Segment the terminal transcript and classify each segment into a behavioral state (startup, ready, working, thinking, prompting, completed, error).
 4. **Extract** -- Pull out recurring output patterns (n-grams generalized into glob patterns) and associate them with states.
 5. **Profile** -- Merge patterns into a tool profile. High-confidence patterns become state indicators.
-6. **Drive** -- Use the learned profile to interact with the tool autonomously: detect states via pattern matching, respond to sub-prompts, and track side effects.
+6. **Export** -- Generate portable skills (markdown) and adapter presets (TypeScript/JSON) from the learned profile.
+7. **Drive** -- Use the learned profile to interact with the tool autonomously: detect states via pattern matching, respond to sub-prompts, and track side effects.
 
 ### Orchestration
 
@@ -28,6 +29,14 @@ Once profiles are built, the **orchestrator** dispatches manifests of tasks to L
 
 Profiles replace hardcoded adapters for interaction. The driver already knows how to navigate any profiled tool. Adapters remain thin and only handle output parsing.
 
+### Skill & Adapter Export
+
+Learned profiles are the source of truth, but consumers need portable artifacts:
+
+- **Skills** -- Standalone markdown documents that teach an agent how to launch, interact with, and interpret the states of a CLI tool. Generated per-tool via `clr export-skill` or composed from fragments via the skill compilation pipeline.
+- **Adapter presets** -- TypeScript or JSON objects conforming to AgentThreader's `AdapterPreset` interface. Generated via `clr export-adapter`. Includes prompt delivery mode, default/forbidden args, error patterns, session management, and operational notes.
+- **Adapter overrides** -- Manual corrections in `adapter-overrides.json` fill gaps that learning cannot yet discover automatically (e.g., forbidden flags, noise patterns). As learning improves, the file shrinks toward zero.
+
 When an Anthropic API key is available, an LLM enhances classification, discovery, probe planning, sub-prompt detection, and orchestrator healing. Without it, all features degrade gracefully to heuristic-only operation.
 
 ## Architecture
@@ -35,12 +44,13 @@ When an Anthropic API key is available, an LLM enhances classification, discover
 ```
 src/
   cli.ts                     CLI entry point (commander-based)
+  index.ts                   Library exports (profiles, skill gen, adapter gen)
   types.ts                   Shared type definitions
   term-utils.ts              ANSI escape stripping, diagnostic extraction, glob matching
   vt-screen.ts               VT100 screen buffer emulator
 
   runner/
-    session.ts               Async wrapper around the PTY harness
+    session.ts               node-pty session: spawn, I/O, settle detection, JSONL transcripts
     state-machine.ts         Transition-driven state machine (consumes profile.transitions[])
     driver.ts                Profile-driven tool interaction loop
 
@@ -54,6 +64,10 @@ src/
     probe-planner.ts         Adaptive probe strategy planning
     healer.ts                Learn failure diagnosis, healing decisions, patch application
     learn-state.ts           Checkpoint/resume for learn sessions
+
+  export/
+    skill-generator.ts       Generate skill markdown from a learned profile
+    adapter-generator.ts     Generate AdapterPreset (TS/JSON) from a learned profile
 
   orchestration/
     types.ts                 Orchestrator types (TaskDef, Manifest, Policy, State)
@@ -76,9 +90,23 @@ src/
     json-repair.ts           JSON repair for LLM output (fences, comments, trailing commas)
     heal-prompts.ts          Learn healer prompt template and decision parser
 
-harness/
-  pty-recorder.exp           Tcl/Expect script that spawns tools in a real PTY
+skill/                         Skill source & build pipeline
+  build/
+    manifest.json            Skill manifest (skill → source + fragment refs)
+    compile.mjs              Compiler: resolves {{include:...}}, emits to compiled/
+  fragments/
+    domain/                  Reusable knowledge fragments (state-machine, interaction-modes, prompt-handling)
+  skills/
+    cli-tool-driver/         Root skill: cli-tool-driver.md (includes domain fragments)
 
+compiled/                      Build output (per-platform skill files, gitignored)
+  claude/                    SKILL.md
+  cursor/                    rules/*.mdc + skills/*/SKILL.md
+  windsurf/                  rules/*.md + skills/*/SKILL.md
+  opencode/                  *.md
+  codex/                     SKILL.md
+
+adapter-overrides.json       Manual adapter overrides (prompt delivery, forbidden flags, noise patterns)
 profiles/                    Learned tool profiles (JSON)
 transcripts/                 Raw session recordings (JSONL)
 state/                       Orchestrator run state (JSON)
@@ -87,7 +115,6 @@ state/                       Orchestrator run state (JSON)
 ## Prerequisites
 
 - **Node.js** >= 20
-- **Tcl/Expect** (`expect` command available in PATH)
 - **Git** (for side-effect tracking with `--work-dir`)
 - **`claude` CLI** (optional, for LLM-enhanced features) -- Claude Code CLI on PATH
 
@@ -97,6 +124,27 @@ state/                       Orchestrator run state (JSON)
 npm install
 npm run build
 ```
+
+### Quick Install (CLI + Skills)
+
+```bash
+bash install-local.sh
+```
+
+This builds the CLI, compiles skills from fragments, and installs compiled outputs to auto-detected IDE directories:
+
+| IDE | Install path |
+|-----|-------------|
+| Claude | `~/.claude/skills/cli-tool-driver/SKILL.md` |
+| Cursor | `~/.cursor/rules/cli-tool-driver.mdc` + `~/.cursor/skills/cli-tool-driver/SKILL.md` |
+| Windsurf | `~/.codeium/windsurf/rules/cli-tool-driver.md` + `~/.codeium/windsurf/skills/cli-tool-driver/SKILL.md` |
+| Codex | `~/.codex/skills/cli-tool-driver/SKILL.md` |
+
+Flags:
+
+- `--skills-only` -- Skip build, just copy compiled skills
+- `--compile-only` -- Just compile skills, don't install
+- `--uninstall` -- Remove installed skills from all IDE directories
 
 ### LLM Configuration
 
@@ -160,6 +208,37 @@ clr run --tool <id> --input <text> [options]
 | `--max-session <ms>` | `120000` | Maximum session duration |
 | `--work-dir <path>` | -- | Directory to track for side effects via git |
 
+### `clr export-skill` -- Generate a skill from a learned profile
+
+Produces a standalone skill markdown file from a tool's learned profile. The skill teaches any agent how to launch, interact with, and interpret the tool's states.
+
+```bash
+clr export-skill --tool <id> [options]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--tool <id>` | required | Tool ID (must have a learned profile) |
+| `--output <path>` | `generated/skills/<tool>.md` | Output file path |
+| `--no-overrides` | -- | Skip manual overrides from `adapter-overrides.json` |
+
+The generated skill includes: launch command, state machine (recognition patterns, transitions, timing), sub-prompts, subcommands, flags, forbidden flags, noise patterns, and operational notes.
+
+### `clr export-adapter` -- Generate an adapter preset from a learned profile
+
+Produces an AgentThreader-compatible `AdapterPreset` from a tool's learned profile.
+
+```bash
+clr export-adapter --tool <id> [options]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--tool <id>` | required | Tool ID (must have a learned profile) |
+| `--format <fmt>` | `ts` | Output format: `ts` (TypeScript) or `json` |
+| `--output <path>` | `generated/adapters/<tool>-preset.<ext>` | Output file path |
+| `--no-overrides` | -- | Skip manual overrides from `adapter-overrides.json` |
+
 ### `clr orchestrate` -- Orchestrate tasks across LLM CLI tools
 
 Dispatches a manifest of tasks to LLM CLI tools using learned profiles. Supports batching, concurrency, dependency ordering, verification, healing, and checkpoint/resume.
@@ -197,7 +276,39 @@ clr orchestrate --manifest tasks.json --resume
 clr orchestrate --manifest tasks.json --status
 ```
 
-### Task Manifest Format
+### `clr discover` -- Discover tool capabilities
+
+Parses a tool's `--help` output to extract subcommands, flags, and interactivity. Uses LLM for structured parsing when available, falls back to regex extraction.
+
+```bash
+clr discover --command <path>
+```
+
+### `clr record` -- Record a raw session
+
+Spawns a tool in a PTY, waits for it to settle, sends ctrl-c to exit, and saves the transcript. Useful for manual inspection and debugging.
+
+```bash
+clr record --command <path> [--args <args>] [--settle-timeout <ms>] [--max-session <ms>] [--id <session-id>]
+```
+
+### `clr classify` -- Classify a recorded transcript
+
+Segments a recorded transcript and classifies each segment into tool states.
+
+```bash
+clr classify --transcript <path> [--profile <tool-id>]
+```
+
+### `clr inspect` -- Inspect a raw transcript
+
+Dumps a recorded transcript's segments and timing information.
+
+```bash
+clr inspect --transcript <path> [--raw]
+```
+
+## Task Manifest Format
 
 ```json
 {
@@ -312,36 +423,91 @@ Tasks are topologically sorted by `depends_on`, then processed in Fibonacci-scal
 
 Orchestrator state is atomically saved to `<state-dir>/state.json` after every batch. Use `--resume` to continue an interrupted run. The state tracks per-task status, failure signatures, healing rounds, and prompt patches.
 
-### `clr discover` -- Discover tool capabilities
+## Skill System
 
-Parses a tool's `--help` output to extract subcommands, flags, and interactivity. Uses LLM for structured parsing when available, falls back to regex extraction.
+The skill system compiles reusable knowledge from fragments into platform-specific skill files for multiple IDEs/agents.
 
-```bash
-clr discover --command <path>
+### Structure
+
+```
+skill/
+  build/manifest.json          Declares skills and their fragment dependencies
+  build/compile.mjs            Compiler (resolves includes, emits per-platform)
+  fragments/domain/            Reusable markdown fragments
+    state-machine.md           The 7-state model, transitions, working↔thinking overlap
+    interaction-modes.md       Interactive vs args mode, prompt delivery
+    prompt-handling.md         Sub-prompts, sentinel pattern, auto-response
+  skills/cli-tool-driver/
+    cli-tool-driver.md         Root skill (uses {{include:...}} directives)
 ```
 
-### `clr record` -- Record a raw session
+### Fragment Inclusion
 
-Spawns a tool in a PTY, waits for it to settle, sends ctrl-c to exit, and saves the transcript. Useful for manual inspection and debugging.
+Skill source files use `{{include:domain/state-machine.md}}` directives that are resolved at compile time. Fragments can include other fragments (recursive resolution).
+
+### Compilation
 
 ```bash
-clr record --command <path> [--args <args>] [--settle-timeout <ms>] [--max-session <ms>] [--id <session-id>]
+npm run compile              # Build compiled/ directory
+npm run compile:validate     # Validate fragment references only
+npm run compile:watch        # Rebuild on changes (file polling)
 ```
 
-### `clr classify` -- Classify a recorded transcript
+The compiler reads `skill/build/manifest.json`, resolves all `{{include:...}}` references, and emits platform-wrapped output to `compiled/`:
 
-Segments a recorded transcript and classifies each segment into tool states.
+| Platform | Output |
+|----------|--------|
+| Claude | `compiled/claude/<skill>/SKILL.md` |
+| Cursor | `compiled/cursor/rules/<skill>.mdc` + `compiled/cursor/skills/<skill>/SKILL.md` |
+| Windsurf | `compiled/windsurf/rules/<skill>.md` + `compiled/windsurf/skills/<skill>/SKILL.md` |
+| Opencode | `compiled/opencode/<skill>.md` |
+| Codex | `compiled/codex/<skill>/SKILL.md` |
 
-```bash
-clr classify --transcript <path> [--profile <tool-id>]
-```
+### Per-Tool Skills (Generated)
 
-### `clr inspect` -- Inspect a raw transcript
+In addition to the compiled generic skill, `clr export-skill` generates a **per-tool** skill markdown from a specific learned profile. This includes the tool's actual recognition patterns, timing, subcommands, flags, sub-prompts, and operational notes -- everything an agent needs to drive that specific tool.
 
-Dumps a recorded transcript's segments and timing information.
+## Adapter Overrides
 
-```bash
-clr inspect --transcript <path> [--raw]
+`adapter-overrides.json` provides manual corrections for adapter preset generation. Each entry is keyed by `tool_id` and can override:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `promptDelivery` | `"stdin"` \| `"positional-arg"` \| `"flag"` | How to pass the prompt |
+| `promptFlag` | string | Flag name when `promptDelivery` is `"flag"` |
+| `defaultArgs` | string[] | Default CLI arguments for batch mode |
+| `forbiddenArgs` | `{flag, reason}[]` | Args that cause failures |
+| `stdinIgnore` | boolean | Tool does not read from stdin pipe |
+| `toolCallsHiddenInStdout` | boolean | Need session show for full transcript |
+| `needsLineBuffering` | boolean | Tokens arrive as separate writes |
+| `maxTurns` | number | Turn limit for the tool |
+| `noisePatterns` | string[] | Non-actionable stderr lines to filter |
+| `transientErrorPatterns` | string[] | Retryable error patterns |
+| `notes` | string[] | Operational notes for the preset |
+
+Overrides are merged into both skill and adapter preset generation. The file is designed to shrink as learning capabilities improve.
+
+## Library Exports
+
+The package exports a programmatic API via `src/index.ts` for use by other packages (e.g., AgentThreader):
+
+```typescript
+import {
+  loadProfile,
+  saveProfile,
+  bootstrapProfile,
+  generateSkillMarkdown,
+  profileToAdapterPreset,
+  generateAdapterTypeScript,
+  generateAdapterJSON,
+  loadAdapterOverrides,
+} from "cli-runner-learner";
+
+import type {
+  ToolProfile,
+  GeneratedAdapterPreset,
+  AdapterOverride,
+} from "cli-runner-learner";
 ```
 
 ## Tool Profiles
@@ -354,6 +520,7 @@ Profiles are JSON files in `profiles/` that encode everything learned about a to
 - **Timing** -- Typical startup time, idle thresholds, max session duration
 - **Discovery** -- Parsed help text, subcommands, flags, interactivity
 - **Learned patterns** -- Raw patterns with confidence scores and occurrence counts
+- **Reduce-motion env** -- Environment variables to suppress animations during automated use
 
 ### Tool States
 
@@ -445,13 +612,14 @@ Failures are normalized into stable signatures by stripping paths, timestamps, U
 
 ## PTY Harness
 
-The Expect script (`harness/pty-recorder.exp`) provides a real PTY environment. It:
+The `Session` class (`src/runner/session.ts`) provides a cross-platform PTY environment via `node-pty`. It:
 
-- Spawns the target command with full terminal emulation
+- Spawns the target command with full terminal emulation (macOS, Linux, Windows)
 - Records all I/O to a JSONL transcript (hex-encoded bytes with timestamps)
-- Emits structured events: `STARTED`, `OUTPUT`, `SETTLED`, `EXIT`
-- Accepts commands via stdin: `SEND:enter`, `SEND:ctrl-c`, `SEND:text:<payload>`, `KILL`
+- Emits structured events: `started`, `output`, `settled`, `exit`
+- Supports rich keyboard input: Tab, Shift-Tab, Esc, arrows, Ctrl-C, Ctrl-D, Enter
 - Detects "settled" state after configurable silence threshold
+- Sets `REDUCE_MOTION=1` universally plus tool-specific reduce-motion env vars
 
 ## Side-Effect Tracking
 
@@ -466,9 +634,15 @@ Works with existing git repos. For non-git directories, returns a minimal snapsh
 ## Development
 
 ```bash
-npm run typecheck    # Type-check without emitting
-npm run build        # Compile TypeScript to dist/
-npm run cli -- <args>  # Run CLI from source via dist/
+npm run typecheck           # Type-check without emitting
+npm run build               # Compile TypeScript to dist/
+npm run cli -- <args>       # Run CLI from source via dist/
+npm run compile             # Compile skills from fragments
+npm run compile:validate    # Validate fragment references
+npm run compile:watch       # Rebuild skills on changes
+npm run setup               # Full build + install skills to IDEs
+npm run setup:skills        # Install skills only (skip build)
+npm run uninstall-skills    # Remove installed skills from IDEs
 ```
 
 ## Typical Workflow
@@ -476,29 +650,39 @@ npm run cli -- <args>  # Run CLI from source via dist/
 ```bash
 # 1. Learn each tool you want to orchestrate
 clr learn --tool claude --command claude --heal auto --rounds 8
-clr learn --tool gemini --command gemini --heal auto --rounds 8
+clr learn --tool crush --command crush --heal auto --rounds 16
 
 # 2. Verify profiles work
 clr run --tool claude --input "hello"
-clr run --tool gemini --input "hello"
+clr run --tool crush --input "hello"
 
-# 3. Write a task manifest
+# 3. Export skills and adapter presets
+clr export-skill --tool claude
+clr export-skill --tool crush
+clr export-adapter --tool claude --format json
+clr export-adapter --tool crush --format ts
+
+# 4. Compile and install skills to IDEs
+npm run compile
+bash install-local.sh --skills-only
+
+# 5. Write a task manifest
 cat > tasks.json << 'EOF'
 {
   "version": "1.0",
   "tasks": [
     { "id": "task-1", "tool_id": "claude", "input": "Do the thing", "timeout_sec": 120, "depends_on": [] },
-    { "id": "task-2", "tool_id": "gemini", "input": "Check the thing", "timeout_sec": 120, "depends_on": ["task-1"] }
+    { "id": "task-2", "tool_id": "crush", "input": "Check the thing", "timeout_sec": 120, "depends_on": ["task-1"] }
   ]
 }
 EOF
 
-# 4. Dry run to check the plan
+# 6. Dry run to check the plan
 clr orchestrate --manifest tasks.json --dry-run
 
-# 5. Execute
+# 7. Execute
 clr orchestrate --manifest tasks.json --concurrency 2
 
-# 6. If interrupted, resume
+# 8. If interrupted, resume
 clr orchestrate --manifest tasks.json --resume
 ```
