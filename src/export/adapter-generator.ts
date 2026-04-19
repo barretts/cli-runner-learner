@@ -9,10 +9,9 @@
  */
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
 import type { ToolProfile } from "../types.js";
-
-const PROJECT_ROOT = resolve(new URL("../../", import.meta.url).pathname);
+import { getPackageRoot } from "../paths.js";
 
 export interface ForbiddenArgEntry {
   flag: string;
@@ -42,7 +41,7 @@ let _overridesCache: Record<string, AdapterOverride> | null = null;
 export function loadAdapterOverrides(): Record<string, AdapterOverride> {
   if (_overridesCache) return _overridesCache;
   try {
-    const raw = readFileSync(resolve(PROJECT_ROOT, "adapter-overrides.json"), "utf-8");
+    const raw = readFileSync(join(getPackageRoot(), "adapter-overrides.json"), "utf-8");
     const parsed = JSON.parse(raw);
     // Filter out $comment and other non-tool keys
     const overrides: Record<string, AdapterOverride> = {};

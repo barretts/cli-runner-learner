@@ -1,19 +1,48 @@
 {
   "name": "cli-runner-learner",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Learn CLI tool behavior via PTY probing, then export skills and adapter presets for agentic automation",
+  "license": "MIT",
+  "author": "Barrett Sonntag",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "clr": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist/",
+    "skill/",
+    "compiled/",
+    "profiles/_template.json",
+    "profiles/agent.json",
+    "profiles/agent-print.json",
+    "profiles/claude.json",
+    "profiles/claude-print.json",
+    "profiles/crush.json",
+    "profiles/crush-print.json",
+    "profiles/gemini.json",
+    "profiles/opencode.json",
+    "adapter-overrides.json",
+    "README.md",
+    "LICENSE",
+    "install-local.sh"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.json",
+    "postbuild": "node -e \"require('fs').chmodSync('dist/cli.js', 0o755)\"",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm run build && npm run smoke",
     "typecheck": "tsc --noEmit",
+    "smoke": "node dist/cli.js --help >/dev/null",
+    "test": "npm run smoke",
     "cli": "node dist/cli.js",
     "compile": "node skill/build/compile.mjs",
     "compile:validate": "node skill/build/compile.mjs --validate",
@@ -22,18 +51,29 @@
     "setup:skills": "bash install-local.sh --skills-only",
     "uninstall-skills": "bash install-local.sh --uninstall"
   },
-  "bin": {
-    "clr": "dist/cli.js"
-  },
-  "files": [
-    "dist",
-    "compiled",
+  "keywords": [
+    "cli",
+    "automation",
+    "agent",
+    "llm",
+    "pty",
+    "tool",
+    "state-machine",
+    "interactive",
     "skill",
-    "profiles",
-    "adapter-overrides.json",
-    "README.md",
-    "install-local.sh"
+    "adapter"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barretts/cli-runner-learner.git"
+  },
+  "homepage": "https://github.com/barretts/cli-runner-learner#readme",
+  "bugs": {
+    "url": "https://github.com/barretts/cli-runner-learner/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20.0.0"
   },
