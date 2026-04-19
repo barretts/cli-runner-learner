@@ -117,8 +117,56 @@ state/                       Orchestrator run state (JSON)
 - **Node.js** >= 20
 - **Git** (for side-effect tracking with `--work-dir`)
 - **`claude` CLI** (optional, for LLM-enhanced features) -- Claude Code CLI on PATH
+- **Native build toolchain** for `node-pty`: `python3`, `make`, a C++ compiler
+  (`gcc`/`g++` on Linux, Xcode Command Line Tools on macOS, Visual Studio Build
+  Tools on Windows). This is only required at install time.
 
-## Setup
+## Install
+
+### As a CLI (global)
+
+```bash
+npm install -g cli-runner-learner
+clr --help
+```
+
+### Run without installing (npx)
+
+```bash
+npx cli-runner-learner --help
+npx -p cli-runner-learner clr learn --command claude --tool claude
+```
+
+### As a library dependency
+
+```bash
+npm install cli-runner-learner
+```
+
+```js
+import {
+  loadProfile,
+  drive,
+  Session,
+  generateSkillMarkdown,
+  profileToAdapterPreset,
+} from "cli-runner-learner";
+```
+
+### Data directory
+
+By default `clr` writes transcripts, learned profiles, learn-state, logs, and
+generated skill/adapter outputs under `./.clr/` (relative to the current working
+directory). Override with the `CLR_DATA_DIR` environment variable:
+
+```bash
+CLR_DATA_DIR=/var/lib/clr clr orchestrate --manifest ./m.json --state-dir /var/lib/clr/state
+```
+
+Bundled seed profiles ship inside the npm package (read-only) and are the
+fallback when no matching profile is present under `$CLR_DATA_DIR/profiles/`.
+
+## Setup from source
 
 ```bash
 npm install

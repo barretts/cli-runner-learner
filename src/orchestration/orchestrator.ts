@@ -108,8 +108,17 @@ export class Orchestrator {
     }
 
     while (batchIndex < pendingTasks.length) {
-      // Filter batch to tasks whose dependencies are satisfied
-      const ready = pendingTasks.filter((t) => this.depsReady(t));
+      // Filter batch to tasks whose dependencies are satisfied AND are still
+      // pending. Without the status check, tasks that moved to DONE in earlier
+      // batches would still be sliced into subsequent batches, causing later
+      // tasks to be skipped because `batchIndex += batch.length` advances past
+      // them.
+      const ready = pendingTasks.filter((t) => {
+        const ts = this.state.tasks[t.id];
+        if (!ts) return false;
+        if (ts.status !== "PENDING" && ts.status !== "FAILED") return false;
+        return this.depsReady(t);
+      });
       const batch = ready.slice(0, batchSize);
       if (batch.length === 0) {
         // All remaining tasks are blocked

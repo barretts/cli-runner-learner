@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { Session, createSessionConfig } from "./runner/session.js";
 import { parseTranscript, segmentByGaps, segmentByFrames, computeTimingProfile, decodeEventData } from "./engine/transcript.js";
 import { stripTermEscapes, extractDiagnosticLines } from "./term-utils.js";
 import { classifySegments, extractTextForState } from "./engine/classifier.js";
 import { extractPatterns } from "./engine/pattern-extractor.js";
-import { loadProfile, saveProfile, bootstrapProfile, mergeLearnedPatterns, registerStructuralIndicators } from "./engine/profile-manager.js";
+import { loadProfile, saveProfile, bootstrapProfile, mergeLearnedPatterns, registerStructuralIndicators, listProfileIds } from "./engine/profile-manager.js";
 import { drive } from "./runner/driver.js";
 import { createLLMClient } from "./llm/client.js";
 import { discoverTool, detectReduceMotionEnv } from "./engine/discovery.js";
@@ -18,14 +18,23 @@ import { diagnoseLearnFailures, heal, applyHealPatches, type HealerContext } fro
 import { initLearnState, checkpointLearnState, loadLearnState, clearLearnState } from "./engine/learn-state.js";
 import { generateSkillMarkdown } from "./export/skill-generator.js";
 import { generateAdapterTypeScript, generateAdapterJSON } from "./export/adapter-generator.js";
+import { getDataDir, getTranscriptDir, getPackageRoot } from "./paths.js";
 
-const PROJECT_ROOT = resolve(new URL("../", import.meta.url).pathname);
+
+// Read version from package.json at runtime so --version stays correct after bumps
+async function getVersion(): Promise<string> {
+  try {
+    const pkg = JSON.parse(await readFile(join(getPackageRoot(), "package.json"), "utf-8"));
+    return pkg.version;
+  } catch {
+    return "0.0.0";
+  }
+}
 
 const program = new Command();
 program
   .name("clr")
-  .description("CLI Runner Learner -- forced learning cycle for interactive CLI tools")
-  .version("0.1.0");
+  .description("CLI Runner Learner -- forced learning cycle for interactive CLI tools");
 
 // ---- record subcommand ----
 
@@ -39,7 +48,7 @@ program
   .option("--id <session-id>", "Session ID for transcript filename")
   .action(async (opts) => {
     const sessionId = opts.id ?? `session-${Date.now()}`;
-    const transcriptDir = join(PROJECT_ROOT, "transcripts");
+    const transcriptDir = getTranscriptDir();
     await mkdir(transcriptDir, { recursive: true });
 
     const config = createSessionConfig({
@@ -47,7 +56,7 @@ program
       args: opts.args ? opts.args.split(" ").filter(Boolean) : [],
       settle_timeout_ms: parseInt(opts.settleTimeout, 10),
       max_session_ms: parseInt(opts.maxSession, 10),
-      session_dir: PROJECT_ROOT,
+      session_dir: getDataDir(),
       session_id: sessionId,
     });
 
@@ -349,7 +358,7 @@ program
         args,
         settle_timeout_ms: settleMs,
         max_session_ms: maxProbeMs,
-        session_dir: PROJECT_ROOT,
+        session_dir: getDataDir(),
         session_id: sessionId,
         env: profile.reduce_motion_env,
       });
@@ -857,7 +866,7 @@ program
     };
 
     const statePath = join(stateDir, "state.json");
-    const transcriptDir = join(PROJECT_ROOT, "transcripts");
+    const transcriptDir = getTranscriptDir();
 
     if (opts.status) {
       const { readFile } = await import("node:fs/promises");
@@ -930,14 +939,14 @@ program
     const useOverrides = opts.overrides !== false;
     const profile = await loadProfile(opts.tool);
     if (!profile) {
-      const profileDir = join(PROJECT_ROOT, "profiles");
+      const ids = await listProfileIds();
       console.error(`No profile found for tool: ${opts.tool}`);
-      console.error(`Available profiles: ${(await import("node:fs")).readdirSync(profileDir).filter((f: string) => f.endsWith(".json") && !f.includes("learn-state")).map((f: string) => f.replace(".json", "")).join(", ")}`);
+      console.error(`Available profiles: ${ids.join(", ")}`);
       process.exit(1);
     }
 
     const md = generateSkillMarkdown(profile, useOverrides);
-    const outDir = join(PROJECT_ROOT, "generated", "skills");
+    const outDir = join(getDataDir(), "generated", "skills");
     await mkdir(outDir, { recursive: true });
     const outPath = opts.output ?? join(outDir, `${opts.tool}.md`);
 
@@ -973,7 +982,7 @@ program
       : generateAdapterJSON(profile, useOverrides);
 
     const ext = isTS ? "ts" : "json";
-    const outDir = join(PROJECT_ROOT, "generated", "adapters");
+    const outDir = join(getDataDir(), "generated", "adapters");
     await mkdir(outDir, { recursive: true });
     const outPath = opts.output ?? join(outDir, `${opts.tool}-preset.${ext}`);
 
@@ -985,4 +994,5 @@ program
     console.log(`[export-adapter] Overrides: ${useOverrides ? "applied" : "skipped"}`);
   });
 
+program.version(await getVersion(), "-v, --version", "output the current version");
 program.parse();
