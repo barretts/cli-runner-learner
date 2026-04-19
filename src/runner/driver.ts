@@ -10,8 +10,7 @@ import { parseSubPromptAnalysis } from "../llm/parsers.js";
 import { registerSubPrompt } from "../engine/profile-manager.js";
 import { resolve, join } from "node:path";
 import { mkdir } from "node:fs/promises";
-
-const PROJECT_ROOT = resolve(new URL("../../", import.meta.url).pathname);
+import { getDataDir, getTranscriptDir, getLogsDir } from "../paths.js";
 
 /**
  * Profile-driven state machine that interacts with a CLI tool
@@ -21,8 +20,10 @@ export async function drive(
   profile: ToolProfile,
   opts: DriveOpts,
 ): Promise<DriveResult> {
+  const dataDir = getDataDir();
+  const transcriptDir = getTranscriptDir();
   const sessionId = `${profile.tool_id}-drive-${Date.now()}`;
-  const logsDir = join(PROJECT_ROOT, "logs");
+  const logsDir = getLogsDir();
   await mkdir(logsDir, { recursive: true });
 
   // For args mode, append input as command-line arguments
@@ -36,7 +37,7 @@ export async function drive(
     args: launchArgs,
     settle_timeout_ms: opts.settle_timeout_ms,
     max_session_ms: opts.max_session_ms,
-    session_dir: PROJECT_ROOT,
+    session_dir: dataDir,
     session_id: sessionId,
   });
 
@@ -71,7 +72,15 @@ export async function drive(
 
     while (!session.done && Date.now() < deadline) {
       const remainingMs = Math.max(deadline - Date.now(), 1000);
-      const event = await session.nextEvent(Math.min(remainingMs, 30000));
+      // Poll cap must be at least `settle_timeout_ms` so a session.nextEvent
+      // timeout does not fire a synthetic "settled" before the real idle
+      // detector in session.resetSettleTimer() does. Previously this was
+      // hardcoded to 30000ms, which silently overrode profiles that requested
+      // longer idle thresholds (e.g. LLM wrappers that take >30s to produce
+      // their first byte) and killed the tool via ctrl-c before any output
+      // arrived.
+      const pollCapMs = Math.max(opts.settle_timeout_ms + 5000, 30000);
+      const event = await session.nextEvent(Math.min(remainingMs, pollCapMs));
 
       switch (event.type) {
         case "started":

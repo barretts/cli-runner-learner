@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "tool_id": "crush-print",
+  "tool_command": "/home/barrett/code/AgentHistoric/scripts/clr-wrappers/crush-print.sh",
+  "last_updated": "2026-04-17T00:00:00.000Z",
+  "confidence": 1,
+  "probe_count": 0,
+  "needs_review": false,
+  "interaction_mode": "args",
+  "_note": "Hand-authored by AgentHistoric for clr integration. Crush stand-in for claude (whose --print mode hangs on this machine). Do not overwrite via `clr learn` without reviewing CLR_ROOT in scripts/lib/clr-runner.mjs first.",
+  "launch": {
+    "default_args": [],
+    "env": {},
+    "needs_pty": false,
+    "startup_timeout_sec": 10
+  },
+  "states": {
+    "startup": {
+      "description": "Wrapper launches crush in `run` mode",
+      "indicators": [],
+      "timeout_sec": 10
+    },
+    "ready": {
+      "description": "Not applicable in args mode; included for schema compatibility",
+      "indicators": []
+    },
+    "working": {
+      "description": "crush is streaming its response",
+      "indicators": []
+    },
+    "completed": {
+      "description": "Tool finished",
+      "indicators": [
+        { "type": "process_exit" }
+      ]
+    },
+    "error": {
+      "description": "Tool errored",
+      "indicators": [
+        { "type": "exit_code_nonzero" }
+      ]
+    }
+  },
+  "transitions": [
+    { "from": "startup", "to": "working", "on": "input_sent" },
+    { "from": "working", "to": "completed", "on": "process_exit" },
+    { "from": "*", "to": "error", "on": "error_indicator" },
+    { "from": "*", "to": "completed", "on": "process_exit" }
+  ],
+  "timing": {
+    "typical_startup_sec": 3,
+    "idle_threshold_sec": 90,
+    "max_session_sec": 300
+  },
+  "learned_patterns": []
+}

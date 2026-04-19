@@ -4,10 +4,9 @@ import { Session, createSessionConfig } from "../runner/session.js";
 import { stripTermEscapes, deepStripTuiArtifacts } from "../term-utils.js";
 import { buildToolDiscoveryPrompt } from "../llm/prompts.js";
 import { parseToolDiscovery } from "../llm/parsers.js";
-import { resolve, join } from "node:path";
+import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-
-const PROJECT_ROOT = resolve(new URL("../../", import.meta.url).pathname);
+import { getDataDir, getTranscriptDir } from "../paths.js";
 
 const HELP_ARG_VARIANTS = [["--help"], ["-h"], ["help"]];
 
@@ -116,7 +115,8 @@ export async function discoverTool(
 
 async function captureHelpOutput(command: string, args: string[]): Promise<string | null> {
   const sessionId = `discovery-${Date.now()}`;
-  const transcriptDir = join(PROJECT_ROOT, "transcripts");
+  const dataDir = getDataDir();
+  const transcriptDir = getTranscriptDir();
   await mkdir(transcriptDir, { recursive: true });
 
   const config = createSessionConfig({
@@ -124,7 +124,7 @@ async function captureHelpOutput(command: string, args: string[]): Promise<strin
     args,
     settle_timeout_ms: 3000,
     max_session_ms: 10000,
-    session_dir: PROJECT_ROOT,
+    session_dir: dataDir,
     session_id: sessionId,
   });
 

@@ -38,8 +38,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Test
-        run: npm test --if-present
+      - name: Smoke test (clr --help)
+        run: npm run smoke
+
+      - name: Verify bin is executable
+        run: test -x dist/cli.js
+
+      - name: Verify shebang
+        run: head -1 dist/cli.js | grep -Fq '#!/usr/bin/env node'
 
       - name: Compile skills
         run: npm run compile
@@ -72,6 +78,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.AGENT_TOKEN || github.token }}
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.AGENT_NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.AGENT_NPM_TOKEN || secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

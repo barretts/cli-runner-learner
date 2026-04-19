@@ -50,10 +50,17 @@ export class Session {
     this.sessionStartTs = Date.now();
     this.lastOutputTs = this.sessionStartTs;
 
-    // Spawn the command in a real PTY
+    // Spawn the command in a real PTY.
+    //
+    // cols is deliberately very wide: at cols=120 the VT emulator would soft-
+    // wrap long lines (e.g. a single-line JSON payload) and insert CR/LF at the
+    // wrap point. Downstream parsers that look at `driveResult.output`
+    // (notably the sentinel adapter) would then see invalid JSON like
+    // `"personaBlend":f\r\nalse`. Setting cols to 10000 effectively disables
+    // soft-wrap for any realistic JSON output while still being a valid PTY.
     this.ptyProcess = pty.spawn(this.config.command, this.config.args, {
       name: "xterm-256color",
-      cols: 120,
+      cols: 10000,
       rows: 40,
       cwd: process.cwd(),
       env,

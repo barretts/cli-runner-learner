@@ -1,10 +1,11 @@
 import { readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { LearnSessionState, ProbeStrategy, ToolState } from "../types.js";
-import { writeAtomicJson, PROFILES_DIR } from "./profile-manager.js";
+import { writeAtomicJson } from "./profile-manager.js";
+import { getProfileDir } from "../paths.js";
 
 function stateFilePath(toolId: string): string {
-  return join(PROFILES_DIR, `${toolId}.learn-state.json`);
+  return join(getProfileDir(), `${toolId}.learn-state.json`);
 }
 
 export function initLearnState(
