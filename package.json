@@ -1,6 +1,6 @@
 {
   "name": "cli-runner-learner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Learn CLI tool behavior via PTY probing, then export skills and adapter presets for agentic automation",
   "license": "MIT",
   "author": "Barrett Sonntag",
