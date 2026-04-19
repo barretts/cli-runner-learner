@@ -1,8 +1,8 @@
-import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import type { ToolProfile, ToolDiscovery, LearnedPattern, StateIndicator, StateDefinition, SubPrompt } from "../types.js";
-
-export const PROFILES_DIR = resolve(new URL("../../profiles", import.meta.url).pathname);
+import { getProfileDir, getBundledProfileDir } from "../paths.js";
 
 /**
  * Atomic JSON write: temp file + rename on same filesystem.
@@ -16,21 +16,79 @@ export async function writeAtomicJson(filePath: string, data: unknown): Promise<
   await rename(tmpPath, filePath);
 }
 
+/**
+ * Load a profile by tool ID.
+ * Resolution order: user profile dir -> bundled seed profiles.
+ */
 export async function loadProfile(toolId: string): Promise<ToolProfile | null> {
-  const path = join(PROFILES_DIR, `${toolId}.json`);
+  // Check user profiles first (in .clr/profiles/)
+  const userProfilePath = join(getProfileDir(), `${toolId}.json`);
+  if (existsSync(userProfilePath)) {
+    try {
+      const raw = await readFile(userProfilePath, "utf-8");
+      return JSON.parse(raw) as ToolProfile;
+    } catch {
+      // Fall through to bundled
+    }
+  }
+  // Fall back to bundled profiles (in npm package)
+  const bundledProfilePath = join(getBundledProfileDir(), `${toolId}.json`);
   try {
-    const raw = await readFile(path, "utf-8");
+    const raw = await readFile(bundledProfilePath, "utf-8");
     return JSON.parse(raw) as ToolProfile;
   } catch {
     return null;
   }
 }
 
+/**
+ * Save a profile to the user profile directory.
+ * Always writes to .clr/profiles/, never to the npm package.
+ */
 export async function saveProfile(profile: ToolProfile): Promise<string> {
-  const path = join(PROFILES_DIR, `${profile.tool_id}.json`);
+  const profileDir = getProfileDir();
+  await mkdir(profileDir, { recursive: true });
+  const path = join(profileDir, `${profile.tool_id}.json`);
   profile.last_updated = new Date().toISOString();
   await writeAtomicJson(path, profile);
   return path;
+}
+
+/**
+ * List available profile IDs (without .json extension).
+ * Checks user profiles first, then bundled.
+ */
+export async function listProfileIds(): Promise<string[]> {
+  const ids = new Set<string>();
+  
+  // User profiles
+  try {
+    const userFiles = await readdir(getProfileDir());
+    for (const f of userFiles) {
+      if (f.endsWith(".json") && !f.includes(".learn-state")) {
+        ids.add(f.replace(".json", ""));
+      }
+    }
+  } catch {
+    // Directory doesn't exist yet
+  }
+  
+  // Bundled profiles (if not already present)
+  try {
+    const bundledFiles = await readdir(getBundledProfileDir());
+    for (const f of bundledFiles) {
+      if (f.endsWith(".json") && !f.includes(".learn-state")) {
+        const id = f.replace(".json", "");
+        if (!ids.has(id)) {
+          ids.add(id);
+        }
+      }
+    }
+  } catch {
+    // Bundled dir doesn't exist
+  }
+  
+  return [...ids].sort();
 }
 
 export function bootstrapProfile(
