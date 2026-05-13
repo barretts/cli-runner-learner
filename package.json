@@ -19,7 +19,6 @@
   },
   "files": [
     "dist/",
-    "skill/",
     "compiled/",
     "profiles/_template.json",
     "profiles/agent.json",
@@ -36,17 +35,9 @@
     "install-local.sh"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.json",
-    "postbuild": "node -e \"require('fs').chmodSync('dist/cli.js', 0o755)\"",
-    "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run build && npm run smoke",
-    "typecheck": "tsc --noEmit",
     "smoke": "node dist/cli.js --help >/dev/null",
     "test": "npm run smoke",
     "cli": "node dist/cli.js",
-    "compile": "node skill/build/compile.mjs",
-    "compile:validate": "node skill/build/compile.mjs --validate",
-    "compile:watch": "node skill/build/compile.mjs --watch",
     "setup": "bash install-local.sh",
     "setup:skills": "bash install-local.sh --skills-only",
     "uninstall-skills": "bash install-local.sh --uninstall"
@@ -71,18 +62,11 @@
   "bugs": {
     "url": "https://github.com/barretts/cli-runner-learner/issues"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "commander": "^13.1.0",
     "node-pty": "^1.1.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.13.0",
-    "typescript": "^5.7.3"
   }
 }
